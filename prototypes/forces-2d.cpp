@@ -1,0 +1,163 @@
+#include <Renderer.h>
+#include <DefaultFramebuffer.h>
+#include <DebugTools/ForceRenderer.h>
+#include <DebugTools/ResourceManager.h>
+#include <DebugTools/ShapeRenderer.h>
+#include <Platform/Sdl2Application.h>
+#include <SceneGraph/Camera2D.h>
+#include <SceneGraph/DualComplexTransformation.h>
+#include <SceneGraph/Object.h>
+#include <SceneGraph/Scene.h>
+#include <Physics/ObjectShape.h>
+#include <Physics/ObjectShapeGroup.h>
+#include <Physics/Box.h>
+#include <Physics/ShapeGroup.h>
+#include <Physics/Sphere.h>
+
+#include "Kotel.h"
+
+namespace Kotel { namespace Prototype {
+
+class Forces2D: public Platform::Application {
+    public:
+        explicit Forces2D(int argc, char** argv);
+
+        void viewportEvent(const Vector2i& size) override;
+        void drawEvent() override;
+        void keyPressEvent(KeyEvent& event) override;
+        void keyReleaseEvent(KeyEvent& event) override;
+
+    private:
+        DebugTools::ResourceManager debugResourceManager;
+
+        Scene2D scene;
+        Object2D cameraObject;
+        SceneGraph::Camera2D<> *camera;
+        SceneGraph::DrawableGroup2D<> drawables;
+        Physics::ObjectShapeGroup2D shapes;
+
+        Object2D *tube, *vehicle;
+
+        const Vector2 gravity = Vector2::yAxis(-9.81);
+
+        struct {
+            Vector2 weightBody,
+                weightLeftArm, weightRightArm,
+                engineLeftArm, engineRightArm;
+        } forces;
+
+        struct {
+            Float body = 260.0f,
+                arms = 80.0f;
+        } masses;
+
+        struct {
+            Float arms = 1000.0f;
+        } powers;
+
+        DualComplex baseLeftArmTransformation, baseRightArmTransformation;
+};
+
+Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (new Configuration())
+    ->setTitle("Kotel::Prototype::Forces2D")
+    ->setSampleCount(16)
+) {
+    Renderer::setClearColor(Color3<>(0.125f));
+
+    /* Camera setup */
+    cameraObject.setParent(&scene);
+    (camera = new SceneGraph::Camera2D<>(&cameraObject))
+        ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
+        ->setProjection(Vector2(3.0f));
+
+    /* Debug draw setup */
+    debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions())
+        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(206.0_degf, 0.75f, 0.9f)));
+    debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions())
+        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(50.0_degf, 0.75f, 0.9f)));
+    debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions())
+        ->setColor(Color3<>(0.2f)));
+    debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions())
+        ->setColor(Color3<>(0.5f)));
+
+    /* Tube */
+    tube = new Object2D(&scene);
+    auto tubeShape = new Physics::ObjectShape2D(tube, &shapes);
+    tubeShape->setShape(
+        Physics::Sphere2D({}, 1.05f) ||
+        Physics::Sphere2D({}, 1.15f)
+    );
+    new DebugTools::ShapeRenderer2D(tubeShape, "tube", &drawables);
+
+    /* Vehicle */
+    baseLeftArmTransformation = DualComplex::rotation(-35._degf)*DualComplex::translation(Vector2::xAxis(1.0f));
+    baseRightArmTransformation = DualComplex::rotation(35._degf)*DualComplex::translation(Vector2::xAxis(-1.0f));
+    vehicle = new Object2D(&scene);
+    auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
+    vehicleShape->setShape(
+        Physics::Sphere2D({}, .2f) ||
+        Physics::Box2D(Matrix3::rotation(-35._degf)*Matrix3::translation(Vector2::xAxis(.585f))*Matrix3::scaling({.385f, .02f})) ||
+        Physics::Box2D(Matrix3::rotation(35._degf)*Matrix3::translation(Vector2::xAxis(-.585f))*Matrix3::scaling({.385f, .02f})) ||
+        Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f})) ||
+        Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f}))
+    );
+    new DebugTools::ShapeRenderer2D(vehicleShape, "vehicle", &drawables);
+
+    /* Gravity forces */
+    forces.weightBody = gravity*masses.body;
+    forces.weightLeftArm = gravity*masses.arms;
+    forces.weightRightArm = gravity*masses.arms;
+    new DebugTools::ForceRenderer2D(vehicle, {},
+        &forces.weightBody, "gravity", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+        &forces.weightLeftArm, "gravity", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+        &forces.weightRightArm, "gravity", &drawables);
+
+    /* Engine forces */
+    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+        &forces.engineLeftArm, "engines", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+        &forces.engineRightArm, "engines", &drawables);
+}
+
+void Forces2D::viewportEvent(const Vector2i& size) {
+    defaultFramebuffer.setViewport({{}, size});
+
+    camera->setViewport(size);
+}
+
+void Forces2D::drawEvent() {
+    defaultFramebuffer.bind(DefaultFramebuffer::Target::Draw);
+    defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
+
+    shapes.setClean();
+    camera->draw(drawables);
+
+    swapBuffers();
+}
+
+void Forces2D::keyPressEvent(KeyEvent& event) {
+    if(event.key() == KeyEvent::Key::Left || event.key() == KeyEvent::Key::Right) {
+        const auto force = Vector2::yAxis(event.key() == KeyEvent::Key::Left ? powers.arms : -powers.arms);
+        forces.engineLeftArm = (vehicle->transformation().rotation()*baseLeftArmTransformation.rotation())
+            .transformVector(force);
+        forces.engineRightArm = (vehicle->transformation().rotation()*baseRightArmTransformation.rotation())
+            .transformVector(-force);
+    } else return;
+
+    event.setAccepted();
+    redraw();
+}
+
+void Forces2D::keyReleaseEvent(KeyEvent& event) {
+    forces.engineLeftArm = {};
+    forces.engineRightArm = {};
+
+    event.setAccepted();
+    redraw();
+}
+
+}}
+
+MAGNUM_APPLICATION_MAIN(Kotel::Prototype::Forces2D)
