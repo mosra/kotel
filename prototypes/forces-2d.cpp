@@ -3,7 +3,11 @@
 #include <DebugTools/ForceRenderer.h>
 #include <DebugTools/ResourceManager.h>
 #include <DebugTools/ShapeRenderer.h>
+#ifndef CORRADE_TARGET_NACL
 #include <Platform/Sdl2Application.h>
+#else
+#include <Platform/NaClApplication.h>
+#endif
 #include <SceneGraph/Camera2D.h>
 #include <SceneGraph/DualComplexTransformation.h>
 #include <SceneGraph/Object.h>
@@ -14,13 +18,21 @@
 #include <Physics/ShapeGroup.h>
 #include <Physics/Sphere.h>
 
+#ifdef MAGNUM_BUILD_STATIC
+#include <Shaders/magnumShadersResourceImport.hpp>
+#endif
+
 #include "Kotel.h"
 
 namespace Kotel { namespace Prototype {
 
 class Forces2D: public Platform::Application {
     public:
+        #ifndef CORRADE_TARGET_NACL
         explicit Forces2D(int argc, char** argv);
+        #else
+        explicit Forces2D(PP_Instance instance);
+        #endif
 
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
@@ -58,9 +70,13 @@ class Forces2D: public Platform::Application {
         DualComplex baseLeftArmTransformation, baseRightArmTransformation;
 };
 
+#ifndef CORRADE_TARGET_NACL
 Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (new Configuration())
     ->setTitle("Kotel::Prototype::Forces2D")
     ->setSampleCount(16)
+#else
+Forces2D::Forces2D(PP_Instance instance): Platform::Application(instance, (new Configuration())
+#endif
 ) {
     Renderer::setClearColor(Color3<>(0.125f));
 
