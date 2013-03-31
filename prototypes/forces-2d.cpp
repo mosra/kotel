@@ -33,12 +33,12 @@ class Forces2D: public Platform::Application {
         Scene2D scene;
         Object2D cameraObject;
         SceneGraph::Camera2D<> *camera;
-        SceneGraph::DrawableGroup2D<> drawables;
+        SceneGraph::DrawableGroup<2> drawables;
         Physics::ObjectShapeGroup2D shapes;
 
         Object2D *tube, *vehicle;
 
-        const Vector2 gravity = Vector2::yAxis(-9.81);
+        Vector2 gravity;
 
         struct {
             Vector2 weightBody,
@@ -47,12 +47,12 @@ class Forces2D: public Platform::Application {
         } forces;
 
         struct {
-            Float body = 260.0f,
-                arms = 80.0f;
+            Float body,
+                arms;
         } masses;
 
         struct {
-            Float arms = 1000.0f;
+            Float arms;
         } powers;
 
         DualComplex baseLeftArmTransformation, baseRightArmTransformation;
@@ -64,6 +64,12 @@ Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (ne
 ) {
     Renderer::setClearColor(Color3<>(0.125f));
 
+    /* Parameters */
+    gravity = Vector2::yAxis(-9.81);
+    masses.body = 260.0f;
+    masses.arms = 80.0f;
+    powers.arms = 1000.0f;
+
     /* Camera setup */
     cameraObject.setParent(&scene);
     (camera = new SceneGraph::Camera2D<>(&cameraObject))
@@ -72,9 +78,9 @@ Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (ne
 
     /* Debug draw setup */
     debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions())
-        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(206.0_degf, 0.75f, 0.9f)));
+        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(Deg(206.0f), 0.75f, 0.9f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions())
-        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(50.0_degf, 0.75f, 0.9f)));
+        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(Deg(50.0f), 0.75f, 0.9f)));
     debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions())
         ->setColor(Color3<>(0.2f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions())
@@ -90,14 +96,14 @@ Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (ne
     new DebugTools::ShapeRenderer2D(tubeShape, "tube", &drawables);
 
     /* Vehicle */
-    baseLeftArmTransformation = DualComplex::rotation(-35._degf)*DualComplex::translation(Vector2::xAxis(1.0f));
-    baseRightArmTransformation = DualComplex::rotation(35._degf)*DualComplex::translation(Vector2::xAxis(-1.0f));
+    baseLeftArmTransformation = DualComplex::rotation(Deg(-35.0f))*DualComplex::translation(Vector2::xAxis(1.0f));
+    baseRightArmTransformation = DualComplex::rotation(Deg(35.0f))*DualComplex::translation(Vector2::xAxis(-1.0f));
     vehicle = new Object2D(&scene);
     auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
     vehicleShape->setShape(
         Physics::Sphere2D({}, .2f) ||
-        Physics::Box2D(Matrix3::rotation(-35._degf)*Matrix3::translation(Vector2::xAxis(.585f))*Matrix3::scaling({.385f, .02f})) ||
-        Physics::Box2D(Matrix3::rotation(35._degf)*Matrix3::translation(Vector2::xAxis(-.585f))*Matrix3::scaling({.385f, .02f})) ||
+        Physics::Box2D(Matrix3::rotation(Deg(-35.0f))*Matrix3::translation(Vector2::xAxis(.585f))*Matrix3::scaling({.385f, .02f})) ||
+        Physics::Box2D(Matrix3::rotation(Deg(35.0f))*Matrix3::translation(Vector2::xAxis(-.585f))*Matrix3::scaling({.385f, .02f})) ||
         Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f})) ||
         Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f}))
     );
