@@ -48,6 +48,8 @@ class Forces2D: public Platform::Application {
 
         Vector2 gravity;
 
+        Deg armAngle;
+
         struct {
             Vector2 weightBody,
                 weightLeftArm, weightRightArm,
@@ -76,6 +78,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Parameters */
     gravity = Vector2::yAxis(-9.81);
+    armAngle = Deg(110.0f);
     masses.body = 260.0f;
     masses.arms = 80.0f;
     powers.arms = 1000.0f;
@@ -105,17 +108,20 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     );
     new DebugTools::ShapeRenderer2D(tubeShape, "tube", &drawables);
 
+    /* Vehicle parameters */
+    baseLeftArmTransformation = DualComplex::rotation(-armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
+    baseRightArmTransformation = DualComplex::rotation(armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
+    Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
+
     /* Vehicle */
-    baseLeftArmTransformation = DualComplex::rotation(Deg(-35.0f))*DualComplex::translation(Vector2::xAxis(1.0f));
-    baseRightArmTransformation = DualComplex::rotation(Deg(35.0f))*DualComplex::translation(Vector2::xAxis(-1.0f));
     vehicle = new Object2D(&scene);
     auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
     vehicleShape->setShape(
         Physics::Sphere2D({}, .2f) ||
-        Physics::Box2D(Matrix3::rotation(Deg(-35.0f))*Matrix3::translation(Vector2::xAxis(.585f))*Matrix3::scaling({.385f, .02f})) ||
-        Physics::Box2D(Matrix3::rotation(Deg(35.0f))*Matrix3::translation(Vector2::xAxis(-.585f))*Matrix3::scaling({.385f, .02f})) ||
-        Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f})) ||
-        Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({.03f, .1f}))
+        Physics::Box2D(Matrix3::rotation(-armAngle/2)*baseArmTransformation) ||
+        Physics::Box2D(Matrix3::rotation(armAngle/2)*baseArmTransformation) ||
+        Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f})) ||
+        Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f}))
     );
     new DebugTools::ShapeRenderer2D(vehicleShape, "vehicle", &drawables);
 
@@ -155,11 +161,11 @@ void Forces2D::drawEvent() {
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::Left || event.key() == KeyEvent::Key::Right) {
-        const auto force = Vector2::yAxis(event.key() == KeyEvent::Key::Left ? powers.arms : -powers.arms);
+        const auto force = Vector2::xAxis(event.key() == KeyEvent::Key::Left ? powers.arms : -powers.arms);
         forces.engineLeftArm = (vehicle->transformation().rotation()*baseLeftArmTransformation.rotation())
             .transformVector(force);
         forces.engineRightArm = (vehicle->transformation().rotation()*baseRightArmTransformation.rotation())
-            .transformVector(-force);
+            .transformVector(force);
     } else return;
 
     event.setAccepted();
