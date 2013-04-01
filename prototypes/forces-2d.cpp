@@ -15,6 +15,7 @@
 #include <Physics/ObjectShape.h>
 #include <Physics/ObjectShapeGroup.h>
 #include <Physics/Box.h>
+#include <Physics/Point.h>
 #include <Physics/ShapeGroup.h>
 #include <Physics/Sphere.h>
 
@@ -98,6 +99,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setColor(Color3<>(0.2f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions())
         ->setColor(Color3<>(0.5f)));
+    debugResourceManager.set("parameters", (new DebugTools::ShapeRendererOptions())
+        ->setPointSize(0.1f)->setColor(Color3<>::fromHSV(Deg(25.0f), 0.75f, 0.9f)));
 
     /* Tube */
     tube = new Object2D(&scene);
@@ -109,21 +112,28 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ShapeRenderer2D(tubeShape, "tube", &drawables);
 
     /* Vehicle parameters */
-    baseLeftArmTransformation = DualComplex::rotation(-armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
-    baseRightArmTransformation = DualComplex::rotation(armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
+    baseLeftArmTransformation = DualComplex::rotation(Deg(-armAngle/2))*DualComplex::translation(Vector2::yAxis(-1.0f));
+    baseRightArmTransformation = DualComplex::rotation(Deg(armAngle/2))*DualComplex::translation(Vector2::yAxis(-1.0f));
     Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
+    Vector2 vehicleCenterOfMass = ((baseLeftArmTransformation.translation() + baseRightArmTransformation.translation())*
+        masses.arms + Vector2()*masses.body)/(masses.arms*2 + masses.body);
 
     /* Vehicle */
     vehicle = new Object2D(&scene);
     auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
     vehicleShape->setShape(
         Physics::Sphere2D({}, .2f) ||
-        Physics::Box2D(Matrix3::rotation(-armAngle/2)*baseArmTransformation) ||
-        Physics::Box2D(Matrix3::rotation(armAngle/2)*baseArmTransformation) ||
+        Physics::Box2D(Matrix3::rotation(Deg(-armAngle/2))*baseArmTransformation) ||
+        Physics::Box2D(Matrix3::rotation(Deg(armAngle/2))*baseArmTransformation) ||
         Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f})) ||
         Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f}))
     );
     new DebugTools::ShapeRenderer2D(vehicleShape, "vehicle", &drawables);
+
+    /* Vehicle center-of-mass */
+    auto vehicleCenterOfMassShape = new Physics::ObjectShape2D(vehicle, &shapes);
+    vehicleCenterOfMassShape->setShape(Physics::Point2D(vehicleCenterOfMass));
+    new DebugTools::ShapeRenderer2D(vehicleCenterOfMassShape, "parameters", &drawables);
 
     /* Gravity forces */
     forces.weightBody = gravity*masses.body;
