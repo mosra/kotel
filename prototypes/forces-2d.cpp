@@ -28,11 +28,7 @@ namespace Kotel { namespace Prototype {
 
 class Forces2D: public Platform::Application {
     public:
-        #ifndef CORRADE_TARGET_NACL
-        explicit Forces2D(int argc, char** argv);
-        #else
-        explicit Forces2D(PP_Instance instance);
-        #endif
+        explicit Forces2D(const Arguments& arguments);
 
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
@@ -70,13 +66,11 @@ class Forces2D: public Platform::Application {
         DualComplex baseLeftArmTransformation, baseRightArmTransformation;
 };
 
-#ifndef CORRADE_TARGET_NACL
-Forces2D::Forces2D(int argc, char** argv): Platform::Application(argc, argv, (new Configuration())
+Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, (new Configuration())
+    #ifndef CORRADE_TARGET_NACL
     ->setTitle("Kotel::Prototype::Forces2D")
     ->setSampleCount(16)
-#else
-Forces2D::Forces2D(PP_Instance instance): Platform::Application(instance, (new Configuration())
-#endif
+    #endif
 ) {
     Renderer::setClearColor(Color3<>(0.125f));
 
