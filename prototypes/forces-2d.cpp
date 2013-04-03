@@ -58,13 +58,10 @@ class Forces2D: public Platform::Application {
         } forces;
 
         struct {
-            Float body,
-                arms;
-        } masses;
-
-        struct {
-            Float arms;
-        } powers;
+            Float massBody,
+                massArm,
+                powerArm;
+        } parameters;
 
         DualComplex baseLeftArmTransformation, baseRightArmTransformation;
 };
@@ -80,9 +77,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Parameters */
     gravity = Vector2::yAxis(-9.81);
     armAngle = Deg(110.0f);
-    masses.body = 260.0f;
-    masses.arms = 80.0f;
-    powers.arms = 1000.0f;
+    parameters.massBody = 260.0f;
+    parameters.massArm = 80.0f;
+    parameters.powerArm = 1000.0f;
 
     /* Camera setup */
     cameraObject.setParent(&scene);
@@ -116,7 +113,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     baseRightArmTransformation = DualComplex::rotation(Deg(armAngle/2))*DualComplex::translation(Vector2::yAxis(-1.0f));
     Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
     Vector2 vehicleCenterOfMass = ((baseLeftArmTransformation.translation() + baseRightArmTransformation.translation())*
-        masses.arms + Vector2()*masses.body)/(masses.arms*2 + masses.body);
+        parameters.massArm + Vector2()*parameters.massBody)/(parameters.massArm*2 + parameters.massBody);
 
     /* Vehicle */
     vehicle = new Object2D(&scene);
@@ -136,9 +133,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ShapeRenderer2D(vehicleCenterOfMassShape, "parameters", &drawables);
 
     /* Gravity forces */
-    forces.weightBody = gravity*masses.body;
-    forces.weightLeftArm = gravity*masses.arms;
-    forces.weightRightArm = gravity*masses.arms;
+    forces.weightBody = gravity*parameters.massBody;
+    forces.weightLeftArm = gravity*parameters.massArm;
+    forces.weightRightArm = gravity*parameters.massArm;
     new DebugTools::ForceRenderer2D(vehicle, {},
         &forces.weightBody, "gravity", &drawables);
     new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
@@ -171,7 +168,7 @@ void Forces2D::drawEvent() {
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::Left || event.key() == KeyEvent::Key::Right) {
-        const auto force = Vector2::xAxis(event.key() == KeyEvent::Key::Left ? powers.arms : -powers.arms);
+        const auto force = Vector2::xAxis(event.key() == KeyEvent::Key::Left ? parameters.powerArm : -parameters.powerArm);
         forces.engineLeftArm = (vehicle->transformation().rotation()*baseLeftArmTransformation.rotation())
             .transformVector(force);
         forces.engineRightArm = (vehicle->transformation().rotation()*baseRightArmTransformation.rotation())
