@@ -246,9 +246,13 @@ void Forces2D::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::Left) {
         engine.currentPowerLeftArm = parameters.powerArm;
         engine.currentPowerRightArm = parameters.powerArm;
-    } else if (event.key() == KeyEvent::Key::Right) {
+    } else if(event.key() == KeyEvent::Key::Right) {
         engine.currentPowerLeftArm = -parameters.powerArm;
         engine.currentPowerRightArm = -parameters.powerArm;
+    } else if(event.key() == KeyEvent::Key::Up) {
+        vehicle->rotate(Deg(5.0f))->normalizeRotation();
+    } else if(event.key() == KeyEvent::Key::Down) {
+        vehicle->rotate(Deg(-5.0f))->normalizeRotation();
     } else return;
 
     event.setAccepted();
