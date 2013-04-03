@@ -47,10 +47,6 @@ class Forces2D: public Platform::Application {
 
         Object2D *tube, *vehicle;
 
-        Vector2 gravity;
-
-        Deg armAngle;
-
         struct {
             Vector2 weightBody,
                 weightLeftArm, weightRightArm,
@@ -63,6 +59,12 @@ class Forces2D: public Platform::Application {
             Float massBody,
                 massArm,
                 powerArm;
+            Vector2 gravity,
+                centerOfMass;
+
+            Deg armAngle;
+            DualComplex baseLeftArmTransformation,
+                baseRightArmTransformation;
         } parameters;
 
         struct {
@@ -70,7 +72,6 @@ class Forces2D: public Platform::Application {
                 currentPowerRightArm;
         } engine;
 
-        DualComplex baseLeftArmTransformation, baseRightArmTransformation;
 };
 
 Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, (new Configuration())
@@ -84,8 +85,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* Parameters */
-    gravity = Vector2::yAxis(-9.81);
-    armAngle = Deg(110.0f);
+    parameters.gravity = Vector2::yAxis(-9.81);
+    parameters.armAngle = Deg(110.0f);
     parameters.massBody = 260.0f;
     parameters.massArm = 80.0f;
     parameters.powerArm = 1000.0f;
@@ -122,54 +123,55 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ShapeRenderer2D(tubeShape, "tube", &drawables);
 
     /* Vehicle parameters */
-    baseLeftArmTransformation = DualComplex::rotation(Deg(-armAngle/2))*DualComplex::translation(Vector2::yAxis(-1.0f));
-    baseRightArmTransformation = DualComplex::rotation(Deg(armAngle/2))*DualComplex::translation(Vector2::yAxis(-1.0f));
-    Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
-    Vector2 vehicleCenterOfMass = ((baseLeftArmTransformation.translation() + baseRightArmTransformation.translation())*
+    parameters.baseLeftArmTransformation = DualComplex::rotation(-parameters.armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
+    parameters.baseRightArmTransformation = DualComplex::rotation(parameters.armAngle/2)*DualComplex::translation(Vector2::yAxis(-1.0f));
+    parameters.centerOfMass = ((parameters.baseLeftArmTransformation.translation() +
+        parameters.baseRightArmTransformation.translation())*
         parameters.massArm + Vector2()*parameters.massBody)/(parameters.massArm*2 + parameters.massBody);
 
     /* Vehicle */
     vehicle = new Object2D(&scene);
+    Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
     auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
     vehicleShape->setShape(
         Physics::Sphere2D({}, .2f) ||
-        Physics::Box2D(Matrix3::rotation(Deg(-armAngle/2))*baseArmTransformation) ||
-        Physics::Box2D(Matrix3::rotation(Deg(armAngle/2))*baseArmTransformation) ||
-        Physics::Box2D(baseLeftArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f})) ||
-        Physics::Box2D(baseRightArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f}))
+        Physics::Box2D(Matrix3::rotation(-parameters.armAngle/2)*baseArmTransformation) ||
+        Physics::Box2D(Matrix3::rotation(parameters.armAngle/2)*baseArmTransformation) ||
+        Physics::Box2D(parameters.baseLeftArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f})) ||
+        Physics::Box2D(parameters.baseRightArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f}))
     );
     new DebugTools::ShapeRenderer2D(vehicleShape, "vehicle", &drawables);
 
     /* Vehicle center-of-mass */
     auto vehicleCenterOfMassShape = new Physics::ObjectShape2D(vehicle, &shapes);
-    vehicleCenterOfMassShape->setShape(Physics::Point2D(vehicleCenterOfMass));
+    vehicleCenterOfMassShape->setShape(Physics::Point2D(parameters.centerOfMass));
     new DebugTools::ShapeRenderer2D(vehicleCenterOfMassShape, "parameters", &drawables);
 
     /* Gravity forces */
-    forces.weightBody = gravity*parameters.massBody;
-    forces.weightLeftArm = gravity*parameters.massArm;
-    forces.weightRightArm = gravity*parameters.massArm;
+    forces.weightBody = parameters.gravity*parameters.massBody;
+    forces.weightLeftArm = parameters.gravity*parameters.massArm;
+    forces.weightRightArm = parameters.gravity*parameters.massArm;
     new DebugTools::ForceRenderer2D(vehicle, {},
         &forces.weightBody, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
         &forces.weightLeftArm, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.weightRightArm, "gravity", &drawables);
 
     /* Engine forces */
-    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
         &forces.engineLeftArm, "engines", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.engineRightArm, "engines", &drawables);
 
     /* Tangent and normal forces */
-    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
         &forces.totalTangentLeftArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.totalTangentRightArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
         &forces.totalNormalLeftArm, "normal", &drawables);
-    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.totalNormalRightArm, "normal", &drawables);
 }
 
@@ -185,13 +187,13 @@ void Forces2D::drawEvent() {
 
     /* Compute tangent and normal vectors */
     const Vector2 tangentLeftArm = (vehicle->transformation().rotation()*
-        baseLeftArmTransformation.rotation()).transformVector(Vector2::xAxis());
+        parameters.baseLeftArmTransformation.rotation()).transformVector(Vector2::xAxis());
     const Vector2 tangentRightArm = (vehicle->transformation().rotation()*
-        baseRightArmTransformation.rotation()).transformVector(Vector2::xAxis());
+        parameters.baseRightArmTransformation.rotation()).transformVector(Vector2::xAxis());
     const Vector2 normalLeftArm = (vehicle->transformation().rotation()*
-        baseLeftArmTransformation.rotation()).transformVector(-Vector2::yAxis());
+        parameters.baseLeftArmTransformation.rotation()).transformVector(-Vector2::yAxis());
     const Vector2 normalRightArm = (vehicle->transformation().rotation()*
-        baseRightArmTransformation.rotation()).transformVector(-Vector2::yAxis());
+        parameters.baseRightArmTransformation.rotation()).transformVector(-Vector2::yAxis());
 
     /* Reset */
     forces.totalNormalLeftArm = forces.totalNormalRightArm =
