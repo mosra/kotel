@@ -54,7 +54,9 @@ class Forces2D: public Platform::Application {
         struct {
             Vector2 weightBody,
                 weightLeftArm, weightRightArm,
-                engineLeftArm, engineRightArm;
+                engineLeftArm, engineRightArm,
+                totalNormalLeftArm, totalNormalRightArm,
+                totalTangentLeftArm, totalTangentRightArm;
         } forces;
 
         struct {
@@ -62,6 +64,11 @@ class Forces2D: public Platform::Application {
                 massArm,
                 powerArm;
         } parameters;
+
+        struct {
+            Float currentPowerLeftArm,
+                currentPowerRightArm;
+        } engine;
 
         DualComplex baseLeftArmTransformation, baseRightArmTransformation;
 };
@@ -71,8 +78,10 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     ->setTitle("Kotel::Prototype::Forces2D")
     ->setSampleCount(16)
     #endif
-) {
+), engine{{}, {}} {
     Renderer::setClearColor(Color3<>(0.125f));
+    Renderer::setFeature(Renderer::Feature::Blending, true);
+    Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* Parameters */
     gravity = Vector2::yAxis(-9.81);
@@ -89,9 +98,13 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Debug draw setup */
     debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions())
-        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(Deg(206.0f), 0.75f, 0.9f)));
+        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions())
-        ->setSize(0.0005f)->setColor(Color3<>::fromHSV(Deg(50.0f), 0.75f, 0.9f)));
+        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
+    debugResourceManager.set("tangent", (new DebugTools::ForceRendererOptions())
+        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
+    debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions())
+        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(5.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions())
         ->setColor(Color3<>(0.2f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions())
@@ -148,6 +161,16 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         &forces.engineLeftArm, "engines", &drawables);
     new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
         &forces.engineRightArm, "engines", &drawables);
+
+    /* Tangent and normal forces */
+    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+        &forces.totalTangentLeftArm, "tangent", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+        &forces.totalTangentRightArm, "tangent", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseLeftArmTransformation.translation(),
+        &forces.totalNormalLeftArm, "normal", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, baseRightArmTransformation.translation(),
+        &forces.totalNormalRightArm, "normal", &drawables);
 }
 
 void Forces2D::viewportEvent(const Vector2i& size) {
@@ -160,6 +183,36 @@ void Forces2D::drawEvent() {
     defaultFramebuffer.bind(DefaultFramebuffer::Target::Draw);
     defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
 
+    /* Compute tangent and normal vectors */
+    const Vector2 tangentLeftArm = (vehicle->transformation().rotation()*
+        baseLeftArmTransformation.rotation()).transformVector(Vector2::xAxis());
+    const Vector2 tangentRightArm = (vehicle->transformation().rotation()*
+        baseRightArmTransformation.rotation()).transformVector(Vector2::xAxis());
+    const Vector2 normalLeftArm = (vehicle->transformation().rotation()*
+        baseLeftArmTransformation.rotation()).transformVector(-Vector2::yAxis());
+    const Vector2 normalRightArm = (vehicle->transformation().rotation()*
+        baseRightArmTransformation.rotation()).transformVector(-Vector2::yAxis());
+
+    /* Reset */
+    forces.totalNormalLeftArm = forces.totalNormalRightArm =
+        forces.totalTangentLeftArm = forces.totalTangentRightArm = {};
+
+    /* Propagate body weight to arms */
+    forces.totalNormalLeftArm += forces.weightBody.projectedOntoNormalized(normalLeftArm);
+    forces.totalNormalRightArm += forces.weightBody.projectedOntoNormalized(normalRightArm);
+
+    /* Decompose arm weight to normal and tangent */
+    forces.totalNormalLeftArm += forces.weightLeftArm.projectedOntoNormalized(normalLeftArm);
+    forces.totalNormalRightArm += forces.weightRightArm.projectedOntoNormalized(normalRightArm);
+    forces.totalTangentLeftArm += forces.weightLeftArm.projectedOntoNormalized(tangentLeftArm);
+    forces.totalTangentRightArm += forces.weightRightArm.projectedOntoNormalized(tangentRightArm);
+
+    /* Engine forces to tangent */
+    forces.engineLeftArm = tangentLeftArm*engine.currentPowerLeftArm;
+    forces.engineRightArm = tangentRightArm*engine.currentPowerRightArm;
+    forces.totalTangentLeftArm += forces.engineLeftArm;
+    forces.totalTangentRightArm += forces.engineRightArm;
+
     shapes.setClean();
     camera->draw(drawables);
 
@@ -167,12 +220,12 @@ void Forces2D::drawEvent() {
 }
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
-    if(event.key() == KeyEvent::Key::Left || event.key() == KeyEvent::Key::Right) {
-        const auto force = Vector2::xAxis(event.key() == KeyEvent::Key::Left ? parameters.powerArm : -parameters.powerArm);
-        forces.engineLeftArm = (vehicle->transformation().rotation()*baseLeftArmTransformation.rotation())
-            .transformVector(force);
-        forces.engineRightArm = (vehicle->transformation().rotation()*baseRightArmTransformation.rotation())
-            .transformVector(force);
+    if(event.key() == KeyEvent::Key::Left) {
+        engine.currentPowerLeftArm = parameters.powerArm;
+        engine.currentPowerRightArm = parameters.powerArm;
+    } else if (event.key() == KeyEvent::Key::Right) {
+        engine.currentPowerLeftArm = -parameters.powerArm;
+        engine.currentPowerRightArm = -parameters.powerArm;
     } else return;
 
     event.setAccepted();
@@ -180,8 +233,7 @@ void Forces2D::keyPressEvent(KeyEvent& event) {
 }
 
 void Forces2D::keyReleaseEvent(KeyEvent& event) {
-    forces.engineLeftArm = {};
-    forces.engineRightArm = {};
+    engine.currentPowerLeftArm = engine.currentPowerRightArm = {};
 
     event.setAccepted();
     redraw();
