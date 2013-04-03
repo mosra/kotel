@@ -1,3 +1,4 @@
+#include <Math/Functions.h>
 #include <Renderer.h>
 #include <DefaultFramebuffer.h>
 #include <DebugTools/ForceRenderer.h>
@@ -51,6 +52,7 @@ class Forces2D: public Platform::Application {
             Vector2 weightBody,
                 weightLeftArm, weightRightArm,
                 engineLeftArm, engineRightArm,
+                frictionLeftArm, frictionRightArm,
                 totalNormalLeftArm, totalNormalRightArm,
                 totalTangentLeftArm, totalTangentRightArm;
         } forces;
@@ -58,7 +60,9 @@ class Forces2D: public Platform::Application {
         struct {
             Float massBody,
                 massArm,
-                powerArm;
+                powerArm,
+                friction;
+
             Vector2 gravity,
                 centerOfMass;
 
@@ -90,6 +94,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     parameters.massBody = 260.0f;
     parameters.massArm = 80.0f;
     parameters.powerArm = 1000.0f;
+    parameters.friction = 0.16f;
 
     /* Camera setup */
     cameraObject.setParent(&scene);
@@ -102,6 +107,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions())
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
+    debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions())
+        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("tangent", (new DebugTools::ForceRendererOptions())
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions())
@@ -158,11 +165,15 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.weightRightArm, "gravity", &drawables);
 
-    /* Engine forces */
+    /* Engine and friction forces */
     new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
         &forces.engineLeftArm, "engines", &drawables);
     new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.engineRightArm, "engines", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
+        &forces.frictionLeftArm, "friction", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
+        &forces.frictionRightArm, "friction", &drawables);
 
     /* Tangent and normal forces */
     new DebugTools::ForceRenderer2D(vehicle, parameters.baseLeftArmTransformation.translation(),
@@ -209,11 +220,21 @@ void Forces2D::drawEvent() {
     forces.totalTangentLeftArm += forces.weightLeftArm.projectedOntoNormalized(tangentLeftArm);
     forces.totalTangentRightArm += forces.weightRightArm.projectedOntoNormalized(tangentRightArm);
 
-    /* Engine forces to tangent */
+    /* Add engine forces to tangent */
     forces.engineLeftArm = tangentLeftArm*engine.currentPowerLeftArm;
     forces.engineRightArm = tangentRightArm*engine.currentPowerRightArm;
     forces.totalTangentLeftArm += forces.engineLeftArm;
     forces.totalTangentRightArm += forces.engineRightArm;
+
+    /* Add friction forces to tangent */
+    forces.frictionLeftArm = -Math::sign(forces.totalTangentLeftArm)*Math::min(
+        Math::abs(tangentLeftArm*forces.totalNormalLeftArm.length()*parameters.friction),
+        Math::abs(forces.totalTangentLeftArm));
+    forces.frictionRightArm = -Math::sign(forces.totalTangentRightArm)*Math::min(
+        Math::abs(tangentRightArm*forces.totalNormalRightArm.length()*parameters.friction),
+        Math::abs(forces.totalTangentRightArm));
+    forces.totalTangentLeftArm += forces.frictionLeftArm;
+    forces.totalTangentRightArm += forces.frictionRightArm;
 
     shapes.setClean();
     camera->draw(drawables);
