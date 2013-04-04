@@ -1,6 +1,7 @@
 #include <Math/Functions.h>
-#include <Renderer.h>
 #include <DefaultFramebuffer.h>
+#include <Renderer.h>
+#include <Timeline.h>
 #include <DebugTools/ForceRenderer.h>
 #include <DebugTools/ResourceManager.h>
 #include <DebugTools/ShapeRenderer.h>
@@ -38,10 +39,11 @@ class Forces2D: public Platform::Application {
         void keyReleaseEvent(KeyEvent& event) override;
 
     private:
-        void physicsStep();
+        void physicsStep(const Float time, const Float delta);
 
         DebugTools::ResourceManager debugResourceManager;
 
+        Timeline timeline;
         Scene2D scene;
         Object2D cameraObject;
         SceneGraph::Camera2D<> *camera;
@@ -65,6 +67,8 @@ class Forces2D: public Platform::Application {
                 powerArm,
                 friction;
 
+            Float physicsTimeDelta;
+
             Vector2 gravity,
                 centerOfMass;
 
@@ -75,12 +79,14 @@ class Forces2D: public Platform::Application {
 
         struct {
             Float currentPowerLeftArm,
-                currentPowerRightArm;
-        } engine;
+                currentPowerRightArm,
+                physicsTime,
+                physicsTimeAccumulator;
+        } state;
 
 };
 
-Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), engine{{}, {}} {
+Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state{{}, {}, {}, {}} {
     /* Try to create MSAA context */
     auto conf = new Configuration();
     #ifndef CORRADE_TARGET_NACL
@@ -97,6 +103,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* Parameters */
+    parameters.physicsTimeDelta = 1.0f/120.0f;
     parameters.gravity = Vector2::yAxis(-9.81);
     parameters.armAngle = Deg(110.0f);
     parameters.massBody = 260.0f;
@@ -192,6 +199,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         &forces.totalNormalLeftArm, "normal", &drawables);
     new DebugTools::ForceRenderer2D(vehicle, parameters.baseRightArmTransformation.translation(),
         &forces.totalNormalRightArm, "normal", &drawables);
+
+    timeline.start();
 }
 
 void Forces2D::viewportEvent(const Vector2i& size) {
@@ -204,12 +213,19 @@ void Forces2D::drawEvent() {
     defaultFramebuffer.bind(DefaultFramebuffer::Target::Draw);
     defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
 
-    physicsStep();
+    /* Do physics steps in elapsed time */
+    state.physicsTimeAccumulator += timeline.previousFrameDuration();
+    while(state.physicsTimeAccumulator >= parameters.physicsTimeDelta) {
+        physicsStep(state.physicsTime, parameters.physicsTimeDelta);
+        state.physicsTimeAccumulator -= parameters.physicsTimeDelta;
+        state.physicsTime += parameters.physicsTimeDelta;
+    }
 
     shapes.setClean();
     camera->draw(drawables);
 
     swapBuffers();
+    timeline.nextFrame();
 }
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
@@ -236,7 +252,7 @@ void Forces2D::keyReleaseEvent(KeyEvent& event) {
     redraw();
 }
 
-void Forces2D::physicsStep() {
+void Forces2D::physicsStep(const Float, const Float) {
     /* Compute tangent and normal vectors */
     const Vector2 tangentLeftArm = (vehicle->transformation().rotation()*
         parameters.baseLeftArmTransformation.rotation()).transformVector(Vector2::xAxis());
@@ -262,8 +278,8 @@ void Forces2D::physicsStep() {
     forces.totalTangentRightArm += forces.weightRightArm.projectedOntoNormalized(tangentRightArm);
 
     /* Add engine forces to tangent */
-    forces.engineLeftArm = tangentLeftArm*engine.currentPowerLeftArm;
-    forces.engineRightArm = tangentRightArm*engine.currentPowerRightArm;
+    forces.engineLeftArm = tangentLeftArm*state.currentPowerLeftArm;
+    forces.engineRightArm = tangentRightArm*state.currentPowerRightArm;
     forces.totalTangentLeftArm += forces.engineLeftArm;
     forces.totalTangentRightArm += forces.engineRightArm;
 
