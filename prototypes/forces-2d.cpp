@@ -38,6 +38,8 @@ class Forces2D: public Platform::Application {
         void keyReleaseEvent(KeyEvent& event) override;
 
     private:
+        void physicsStep();
+
         DebugTools::ResourceManager debugResourceManager;
 
         Scene2D scene;
@@ -202,6 +204,39 @@ void Forces2D::drawEvent() {
     defaultFramebuffer.bind(DefaultFramebuffer::Target::Draw);
     defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
 
+    physicsStep();
+
+    shapes.setClean();
+    camera->draw(drawables);
+
+    swapBuffers();
+}
+
+void Forces2D::keyPressEvent(KeyEvent& event) {
+    if(event.key() == KeyEvent::Key::Left) {
+        state.currentPowerLeftArm = parameters.powerArm;
+        state.currentPowerRightArm = parameters.powerArm;
+    } else if(event.key() == KeyEvent::Key::Right) {
+        state.currentPowerLeftArm = -parameters.powerArm;
+        state.currentPowerRightArm = -parameters.powerArm;
+    } else if(event.key() == KeyEvent::Key::Up) {
+        vehicle->rotate(Deg(5.0f))->normalizeRotation();
+    } else if(event.key() == KeyEvent::Key::Down) {
+        vehicle->rotate(Deg(-5.0f))->normalizeRotation();
+    } else return;
+
+    event.setAccepted();
+    redraw();
+}
+
+void Forces2D::keyReleaseEvent(KeyEvent& event) {
+    state.currentPowerLeftArm = state.currentPowerRightArm = {};
+
+    event.setAccepted();
+    redraw();
+}
+
+void Forces2D::physicsStep() {
     /* Compute tangent and normal vectors */
     const Vector2 tangentLeftArm = (vehicle->transformation().rotation()*
         parameters.baseLeftArmTransformation.rotation()).transformVector(Vector2::xAxis());
@@ -241,35 +276,6 @@ void Forces2D::drawEvent() {
         Math::abs(forces.totalTangentRightArm));
     forces.totalTangentLeftArm += forces.frictionLeftArm;
     forces.totalTangentRightArm += forces.frictionRightArm;
-
-    shapes.setClean();
-    camera->draw(drawables);
-
-    swapBuffers();
-}
-
-void Forces2D::keyPressEvent(KeyEvent& event) {
-    if(event.key() == KeyEvent::Key::Left) {
-        engine.currentPowerLeftArm = parameters.powerArm;
-        engine.currentPowerRightArm = parameters.powerArm;
-    } else if(event.key() == KeyEvent::Key::Right) {
-        engine.currentPowerLeftArm = -parameters.powerArm;
-        engine.currentPowerRightArm = -parameters.powerArm;
-    } else if(event.key() == KeyEvent::Key::Up) {
-        vehicle->rotate(Deg(5.0f))->normalizeRotation();
-    } else if(event.key() == KeyEvent::Key::Down) {
-        vehicle->rotate(Deg(-5.0f))->normalizeRotation();
-    } else return;
-
-    event.setAccepted();
-    redraw();
-}
-
-void Forces2D::keyReleaseEvent(KeyEvent& event) {
-    engine.currentPowerLeftArm = engine.currentPowerRightArm = {};
-
-    event.setAccepted();
-    redraw();
 }
 
 }}
