@@ -17,6 +17,7 @@
 #include <Physics/ObjectShape.h>
 #include <Physics/ObjectShapeGroup.h>
 #include <Physics/Box.h>
+#include <Physics/LineSegment.h>
 #include <Physics/Point.h>
 #include <Physics/ShapeGroup.h>
 #include <Physics/Sphere.h>
@@ -153,12 +154,15 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Vehicle */
     vehicle = new Object2D(&scene);
-    Matrix3 baseArmTransformation = Matrix3::translation(Vector2::yAxis(-0.585f))*Matrix3::scaling({0.02f, 0.385f});
+    const auto armA = Vector2::yAxis(-0.200f);
+    const auto armB = Vector2::yAxis(-0.970f);
+    const auto leftArmRotation = Complex::rotation(-parameters.armAngle/2);
+    const auto rightArmRotation = Complex::rotation(parameters.armAngle/2);
     auto vehicleShape = new Physics::ObjectShape2D(vehicle, &shapes);
     vehicleShape->setShape(
         Physics::Sphere2D({}, .2f) ||
-        Physics::Box2D(Matrix3::rotation(-parameters.armAngle/2)*baseArmTransformation) ||
-        Physics::Box2D(Matrix3::rotation(parameters.armAngle/2)*baseArmTransformation) ||
+        Physics::LineSegment2D(leftArmRotation.transformVector(armA), leftArmRotation.transformVector(armB)) ||
+        Physics::LineSegment2D(rightArmRotation.transformVector(armA), rightArmRotation.transformVector(armB)) ||
         Physics::Box2D(parameters.baseLeftArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f})) ||
         Physics::Box2D(parameters.baseRightArmTransformation.toMatrix()*Matrix3::scaling({0.1f, 0.03f}))
     );
