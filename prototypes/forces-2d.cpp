@@ -256,14 +256,10 @@ void Forces2D::keyReleaseEvent(KeyEvent& event) {
 
 void Forces2D::physicsStep(const Float, const Float) {
     /* Compute tangent and normal vectors */
-    const Vector2 tangentLeftArm =
-        leftArm->absoluteTransformation().rotation().transformVector(Vector2::xAxis());
-    const Vector2 tangentRightArm =
-        rightArm->absoluteTransformation().rotation().transformVector(Vector2::xAxis());
-    const Vector2 normalLeftArm =
-        leftArm->absoluteTransformation().rotation().transformVector(-Vector2::yAxis());
-    const Vector2 normalRightArm =
-        rightArm->absoluteTransformation().rotation().transformVector(-Vector2::yAxis());
+    const Vector2 tangentLeftArm(leftArm->absoluteTransformation().rotation());
+    const Vector2 tangentRightArm(rightArm->absoluteTransformation().rotation());
+    const Vector2 normalLeftArm = tangentLeftArm.perpendicular();
+    const Vector2 normalRightArm = tangentRightArm.perpendicular();
 
     /* Reset forces */
     forces.totalNormalLeftArm = forces.totalNormalRightArm =
