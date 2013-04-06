@@ -119,21 +119,21 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
-    debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions())
+    debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions())
+    debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions())
+    debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("tangent", (new DebugTools::ForceRendererOptions())
+    debugResourceManager.set("tangent", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
-    debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions())
+    debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(5.0f), 0.75f, 0.9f, 0.75f)));
-    debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions())
+    debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions)
         ->setColor(Color3<>(0.2f)));
-    debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions())
+    debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
         ->setColor(Color3<>(0.5f)));
-    debugResourceManager.set("parameters", (new DebugTools::ShapeRendererOptions())
+    debugResourceManager.set("parameters", (new DebugTools::ShapeRendererOptions)
         ->setPointSize(0.1f)->setColor(Color3<>::fromHSV(Deg(25.0f), 0.75f, 0.9f)));
 
     /* Tube */
