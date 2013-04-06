@@ -94,7 +94,7 @@ class Forces2D: public Platform::Application {
 
 };
 
-Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state{{}, {}, {}, {}, {}, {}, {}, {}} {
+Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state() {
     /* Try to create MSAA context */
     auto conf = new Configuration();
     #ifndef CORRADE_TARGET_NACL
