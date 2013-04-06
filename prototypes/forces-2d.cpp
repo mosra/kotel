@@ -41,7 +41,9 @@ class Forces2D: public Platform::Application {
         void keyReleaseEvent(KeyEvent& event) override;
 
     private:
+        void globalPhysicsStep(const Float time, const Float delta);
         void physicsStep(const Float time, const Float delta);
+        void applyForce(const Vector2& position, const Vector2& force);
 
         DebugTools::ResourceManager debugResourceManager;
 
@@ -68,7 +70,8 @@ class Forces2D: public Platform::Application {
                 massArm,
                 mass,
                 powerArm,
-                friction;
+                friction,
+                momentOfInertia;
 
             Float physicsTimeDelta;
             Vector2 gravity;
@@ -81,12 +84,17 @@ class Forces2D: public Platform::Application {
             Float currentPowerLeftArm,
                 currentPowerRightArm,
                 physicsTime,
-                physicsTimeAccumulator;
+                physicsTimeAccumulator,
+                angularSpeed,
+                torque;
+
+            Vector2 linearVelocity,
+                force;
         } state;
 
 };
 
-Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state{{}, {}, {}, {}} {
+Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state{{}, {}, {}, {}, {}, {}, {}, {}} {
     /* Try to create MSAA context */
     auto conf = new Configuration();
     #ifndef CORRADE_TARGET_NACL
@@ -162,6 +170,11 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     forces.weightLeftArm = parameters.gravity*parameters.massArm;
     forces.weightRightArm = parameters.gravity*parameters.massArm;
 
+    /* Moment of inertia */
+    parameters.momentOfInertia = body->transformation().translation().dot()*parameters.massBody +
+        leftArm->transformation().translation().dot()*parameters.massArm +
+        rightArm->transformation().translation().dot()*parameters.massArm;
+
     /* Tube visualization */
     new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &shapes))
         ->setShape(Physics::Sphere2D({}, 1.05f) || Physics::Sphere2D({}, 1.15f)),
@@ -218,7 +231,7 @@ void Forces2D::drawEvent() {
     /* Do physics steps in elapsed time */
     state.physicsTimeAccumulator += timeline.previousFrameDuration();
     while(state.physicsTimeAccumulator >= parameters.physicsTimeDelta) {
-        physicsStep(state.physicsTime, parameters.physicsTimeDelta);
+        globalPhysicsStep(state.physicsTime, parameters.physicsTimeDelta);
         state.physicsTimeAccumulator -= parameters.physicsTimeDelta;
         state.physicsTime += parameters.physicsTimeDelta;
     }
@@ -228,6 +241,7 @@ void Forces2D::drawEvent() {
 
     swapBuffers();
     timeline.nextFrame();
+    redraw();
 }
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
@@ -252,6 +266,30 @@ void Forces2D::keyReleaseEvent(KeyEvent& event) {
 
     event.setAccepted();
     redraw();
+}
+
+void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
+    /* Compute force and torque at original position */
+    state.force = {};
+    state.torque = {};
+    physicsStep(time, delta);
+
+    Vector2 linearVelocityIncrease = 0.5f*(state.force/parameters.mass)*delta;
+    Float angularSpeedIncrease(0.5f*(state.torque/parameters.momentOfInertia)*delta);
+
+    /* New position and rotation (around COM) */
+    vehicle->translate((state.linearVelocity += linearVelocityIncrease)*delta)
+        ->rotate(Rad(state.angularSpeed += angularSpeedIncrease)*delta, SceneGraph::TransformationType::Local)
+        ->normalizeRotation();
+
+    /* Compute force at new position */
+    state.force = {};
+    state.torque = {};
+    physicsStep(time+delta, delta);
+
+    /* New velocity */
+    state.linearVelocity += 0.5f*(state.force/parameters.mass)*delta;
+    state.angularSpeed += 0.5f*(state.torque/parameters.momentOfInertia)*delta;
 }
 
 void Forces2D::physicsStep(const Float, const Float) {
@@ -290,6 +328,15 @@ void Forces2D::physicsStep(const Float, const Float) {
         Math::abs(forces.totalTangentRightArm));
     forces.totalTangentLeftArm += forces.frictionLeftArm;
     forces.totalTangentRightArm += forces.frictionRightArm;
+
+    /* Ignore normal force, apply tangent ones */
+    applyForce(leftArm->transformation().translation(), forces.totalTangentLeftArm);
+    applyForce(rightArm->transformation().translation(), forces.totalTangentRightArm);
+}
+
+void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
+    state.force += force;
+    state.torque += Vector2::cross(position, force);
 }
 
 }}
