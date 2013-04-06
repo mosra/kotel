@@ -54,7 +54,7 @@ class Forces2D: public Platform::Application {
         SceneGraph::DrawableGroup<2> drawables;
         Physics::ObjectShapeGroup2D shapes;
 
-        Object2D *tube, *vehicle, *body, *leftArm, *rightArm;
+        Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 
         struct {
             Vector2 weightBody,
@@ -76,7 +76,7 @@ class Forces2D: public Platform::Application {
             Float physicsTimeDelta;
             Vector2 gravity;
 
-            Deg armAngle;
+            Deg armAngle, engineAngle;
             Float armRadius;
         } parameters;
 
@@ -138,6 +138,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     parameters.physicsTimeDelta = 1.0f/120.0f;
     parameters.gravity = Vector2::yAxis(-9.81);
     parameters.armAngle = Deg(110.0f);
+    parameters.engineAngle = Deg(0.0f);
     parameters.armRadius = 1.0f;
     parameters.massBody = 260.0f;
     parameters.massArm = 80.0f;
@@ -150,20 +151,31 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     vehicle = new Object2D(&scene);
     (body = new Object2D(vehicle))
         ->translate({});
-    (leftArm = new Object2D(vehicle))
+    (armLeft = new Object2D(vehicle))
         ->translate(Vector2::yAxis(-parameters.armRadius))
         ->rotate(-parameters.armAngle/2);
-    (rightArm = new Object2D(vehicle))
+    (armRight = new Object2D(vehicle))
+        ->translate(Vector2::yAxis(-parameters.armRadius))
+        ->rotate(parameters.armAngle/2);
+    (engineLeft = new Object2D(vehicle))
+        ->rotate(-parameters.engineAngle)
+        ->translate(Vector2::yAxis(-parameters.armRadius))
+        ->rotate(-parameters.armAngle/2);
+    (engineRight = new Object2D(vehicle))
+        ->rotate(parameters.engineAngle)
         ->translate(Vector2::yAxis(-parameters.armRadius))
         ->rotate(parameters.armAngle/2);
 
     /* Compute center of mass and move it to center of the object */
     const Vector2 centerOfMass = (body->transformation().translation()*parameters.massBody +
-        (leftArm->transformation().translation() + rightArm->transformation().translation())*parameters.massArm)/parameters.mass;
+        (engineLeft->transformation().translation() + engineRight->transformation().translation())*
+        parameters.massArm)/parameters.mass;
     vehicle->translate(centerOfMass);
     body->translate(-centerOfMass);
-    leftArm->translate(-centerOfMass);
-    rightArm->translate(-centerOfMass);
+    armLeft->translate(-centerOfMass);
+    armRight->translate(-centerOfMass);
+    engineLeft->translate(-centerOfMass);
+    engineRight->translate(-centerOfMass);
 
     /* Weight forces */
     forces.weightBody = parameters.gravity*parameters.massBody;
@@ -172,8 +184,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Moment of inertia */
     parameters.momentOfInertia = body->transformation().translation().dot()*parameters.massBody +
-        leftArm->transformation().translation().dot()*parameters.massArm +
-        rightArm->transformation().translation().dot()*parameters.massArm;
+        engineLeft->transformation().translation().dot()*parameters.massArm +
+        engineRight->transformation().translation().dot()*parameters.massArm;
 
     /* Tube visualization */
     new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &shapes))
@@ -184,34 +196,35 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const auto armA = Vector2::yAxis(parameters.armRadius-0.2f);
     const auto armB = Vector2::yAxis(0.03f);
     new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(body, &shapes))
-        ->setShape(Physics::Sphere2D({}, 0.2f)),
-        "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(leftArm, &shapes))
-        ->setShape(Physics::LineSegment2D(armA, armB) || Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))),
-        "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(rightArm, &shapes))
-        ->setShape(Physics::LineSegment2D(armA, armB) || Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))),
-        "vehicle", &drawables);
+        ->setShape(Physics::Sphere2D({}, 0.2f)), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armLeft, &shapes))
+        ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armRight, &shapes))
+        ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineLeft, &shapes))
+        ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineRight, &shapes))
+        ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
 
     /* Vehicle center-of-mass visualization */
     new DebugTools::ObjectRenderer2D(vehicle, "parameters", &drawables);
 
     /* Gravity forces visualization */
     new DebugTools::ForceRenderer2D(body, {}, &forces.weightBody, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(leftArm, {}, &forces.weightLeftArm, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(rightArm, {}, &forces.weightRightArm, "gravity", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.weightLeftArm, "gravity", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.weightRightArm, "gravity", &drawables);
 
     /* Engine and friction forces visualization */
-    new DebugTools::ForceRenderer2D(leftArm, {}, &forces.engineLeftArm, "engines", &drawables);
-    new DebugTools::ForceRenderer2D(rightArm, {}, &forces.engineRightArm, "engines", &drawables);
-    new DebugTools::ForceRenderer2D(leftArm, {}, &forces.frictionLeftArm, "friction", &drawables);
-    new DebugTools::ForceRenderer2D(rightArm, {}, &forces.frictionRightArm, "friction", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "engines", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "engines", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
 
     /* Tangent and normal forces */
-    new DebugTools::ForceRenderer2D(leftArm, {}, &forces.totalTangentLeftArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(rightArm, {}, &forces.totalTangentRightArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(leftArm, {}, &forces.totalNormalLeftArm, "normal", &drawables);
-    new DebugTools::ForceRenderer2D(rightArm, {}, &forces.totalNormalRightArm, "normal", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalTangentLeftArm, "tangent", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalTangentRightArm, "tangent", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalNormalLeftArm, "normal", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalNormalRightArm, "normal", &drawables);
 
     /* Zero-time physics step */
     physicsStep(state.physicsTime, parameters.physicsTimeDelta);
@@ -294,8 +307,10 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
 void Forces2D::physicsStep(const Float, const Float) {
     /* Compute tangent and normal vectors */
-    const Vector2 tangentLeftArm(leftArm->absoluteTransformation().rotation());
-    const Vector2 tangentRightArm(rightArm->absoluteTransformation().rotation());
+    const Vector2 engineLeftArm(engineLeft->absoluteTransformation().rotation());
+    const Vector2 engineRightArm(engineRight->absoluteTransformation().rotation());
+    const Vector2 tangentLeftArm(armLeft->absoluteTransformation().rotation());
+    const Vector2 tangentRightArm(armRight->absoluteTransformation().rotation());
     const Vector2 normalLeftArm = tangentLeftArm.perpendicular();
     const Vector2 normalRightArm = tangentRightArm.perpendicular();
 
@@ -313,11 +328,13 @@ void Forces2D::physicsStep(const Float, const Float) {
     forces.totalTangentLeftArm += forces.weightLeftArm.projectedOntoNormalized(tangentLeftArm);
     forces.totalTangentRightArm += forces.weightRightArm.projectedOntoNormalized(tangentRightArm);
 
-    /* Add engine forces to tangent */
-    forces.engineLeftArm = tangentLeftArm*state.currentPowerLeftArm;
-    forces.engineRightArm = tangentRightArm*state.currentPowerRightArm;
-    forces.totalTangentLeftArm += forces.engineLeftArm;
-    forces.totalTangentRightArm += forces.engineRightArm;
+    /* Add engine forces*/
+    forces.engineLeftArm = engineLeftArm*state.currentPowerLeftArm;
+    forces.engineRightArm = engineRightArm*state.currentPowerRightArm;
+    forces.totalTangentLeftArm += forces.engineLeftArm.projectedOntoNormalized(tangentLeftArm);
+    forces.totalTangentRightArm += forces.engineRightArm.projectedOntoNormalized(tangentRightArm);
+    forces.totalNormalLeftArm += forces.engineLeftArm.projectedOntoNormalized(normalLeftArm);
+    forces.totalNormalRightArm += forces.engineRightArm.projectedOntoNormalized(normalRightArm);
 
     /* Add friction forces to tangent */
     forces.frictionLeftArm = -Math::sign(forces.totalTangentLeftArm)*Math::min(
@@ -330,8 +347,8 @@ void Forces2D::physicsStep(const Float, const Float) {
     forces.totalTangentRightArm += forces.frictionRightArm;
 
     /* Ignore normal force, apply tangent ones */
-    applyForce(leftArm->transformation().translation(), forces.totalTangentLeftArm);
-    applyForce(rightArm->transformation().translation(), forces.totalTangentRightArm);
+    applyForce(engineLeft->transformation().translation(), forces.totalTangentLeftArm);
+    applyForce(engineRight->transformation().translation(), forces.totalTangentRightArm);
 }
 
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
