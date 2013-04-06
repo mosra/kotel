@@ -13,7 +13,7 @@ Demos and prototypes
 Various demos, physics and gameplay prototypes are available in `prototypes/`
 subdirectory and also online running in Google Chrome Native Client:
 
-*   **Forces2D** -- http://mosra.github.com/kotel/forces-2d.html
+*   **Forces2D** -- http://mosra.github.io/kotel/forces-2d.html
 
 You need Google Chrome 22 or higher with working Native Client and OpenGL.
 Native Client is disabled by default and only apps from Chrome Web Store are
