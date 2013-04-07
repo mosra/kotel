@@ -52,9 +52,14 @@ class Forces2D: public Platform::Application {
         Object2D cameraObject;
         SceneGraph::Camera2D<> *camera;
         SceneGraph::DrawableGroup<2> drawables;
-        Physics::ObjectShapeGroup2D shapes;
+        Physics::ObjectShapeGroup2D visualizationShapes, collisionShapes;
 
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
+
+        struct {
+            Physics::Sphere2D *tubeMin, *tubeMax;
+            Physics::Point2D *vehicleBody, *vehicleArmLeft, *vehicleArmRight;
+        } shapes;
 
         struct {
             Vector2 weightBody,
@@ -127,8 +132,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(5.0f), 0.75f, 0.9f, 0.75f)));
-    debugResourceManager.set("tube", (new DebugTools::ShapeRendererOptions)
-        ->setColor(Color3<>(0.2f)));
+    debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
+        ->setPointSize(0.1f)->setColor(Color4<>::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
         ->setColor(Color3<>(0.5f)));
     debugResourceManager.set("parameters", (new DebugTools::ObjectRendererOptions)
@@ -187,23 +192,31 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineLeft->transformation().translation().dot()*parameters.massArm +
         engineRight->transformation().translation().dot()*parameters.massArm;
 
-    /* Tube visualization */
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &shapes))
-        ->setShape(Physics::Sphere2D({}, 1.05f) || Physics::Sphere2D({}, 1.15f)),
-        "tube", &drawables);
+    /* Tube and vehicle collision shapes */
+    shapes.tubeMin = new Physics::Sphere2D({}, 0.99f);
+    shapes.tubeMax = new Physics::Sphere2D({}, 1.01f);
+    shapes.vehicleBody = new Physics::Point2D(body->transformation().translation()+Vector2::yAxis(0.15f));
+    shapes.vehicleArmLeft = new Physics::Point2D(engineLeft->transformation().translation());
+    shapes.vehicleArmRight = new Physics::Point2D(engineRight->transformation().translation());
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &collisionShapes))
+        ->setShape(std::ref(*shapes.tubeMin) || std::ref(*shapes.tubeMax)),
+        "collision", &drawables);
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(vehicle, &collisionShapes))
+        ->setShape(std::ref(*shapes.vehicleBody) || std::ref(*shapes.vehicleArmLeft) || std::ref(*shapes.vehicleArmRight)),
+        "collision", &drawables);
 
     /* Vehicle visualization */
     const auto armA = Vector2::yAxis(parameters.armRadius-0.2f);
     const auto armB = Vector2::yAxis(0.03f);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(body, &shapes))
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(body, &visualizationShapes))
         ->setShape(Physics::Sphere2D({}, 0.2f)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armLeft, &shapes))
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armLeft, &visualizationShapes))
         ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armRight, &shapes))
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armRight, &visualizationShapes))
         ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineLeft, &shapes))
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineLeft, &visualizationShapes))
         ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineRight, &shapes))
+    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineRight, &visualizationShapes))
         ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
 
     /* Vehicle center-of-mass visualization */
@@ -220,7 +233,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
 
-    /* Tangent and normal forces */
+    /* Tangent and normal forces visualization */
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalTangentLeftArm, "tangent", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalTangentRightArm, "tangent", &drawables);
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalNormalLeftArm, "normal", &drawables);
@@ -249,7 +262,8 @@ void Forces2D::drawEvent() {
         state.physicsTime += parameters.physicsTimeDelta;
     }
 
-    shapes.setClean();
+    visualizationShapes.setClean();
+    collisionShapes.setClean();
     camera->draw(drawables);
 
     swapBuffers();
