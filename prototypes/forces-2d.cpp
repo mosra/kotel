@@ -150,7 +150,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Object initialization */
     tube = new Object2D(&scene);
-    vehicle = new Object2D(&scene);
+    (vehicle = new Object2D(&scene))
+        ->translate(Vector2::yAxis(0.3f));
     (body = new Object2D(vehicle))
         ->translate({});
     (armLeft = new Object2D(vehicle))
