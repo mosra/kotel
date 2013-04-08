@@ -62,12 +62,10 @@ class Forces2D: public Platform::Application {
         } shapes;
 
         struct {
-            Vector2 weightBody,
-                weightLeftArm, weightRightArm,
+            Vector2 weight,
                 engineLeftArm, engineRightArm,
                 frictionLeftArm, frictionRightArm,
-                totalNormalLeftArm, totalNormalRightArm,
-                totalTangentLeftArm, totalTangentRightArm;
+                totalLeftArm, totalRightArm;
         } forces;
 
         struct {
@@ -120,16 +118,14 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
-    debugResourceManager.set("gravity", (new DebugTools::ForceRendererOptions)
+    debugResourceManager.set("weight", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("tangent", (new DebugTools::ForceRendererOptions)
+    debugResourceManager.set("total", (new DebugTools::ForceRendererOptions)
         ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
-    debugResourceManager.set("normal", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(5.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
         ->setPointSize(0.1f)->setColor(Color4<>::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
@@ -180,10 +176,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     engineLeft->translate(-centerOfMass);
     engineRight->translate(-centerOfMass);
 
-    /* Weight forces */
-    forces.weightBody = parameters.gravity*parameters.massBody;
-    forces.weightLeftArm = parameters.gravity*parameters.massArm;
-    forces.weightRightArm = parameters.gravity*parameters.massArm;
+    /* Weight force */
+    forces.weight = parameters.gravity/parameters.massInverted;
 
     /* Moment of inertia */
     parameters.momentOfInertiaInverted = 1.0f/(body->transformation().translation().dot()*massBody +
@@ -220,10 +214,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Vehicle center-of-mass visualization */
     new DebugTools::ObjectRenderer2D(vehicle, "parameters", &drawables);
 
-    /* Gravity forces visualization */
-    new DebugTools::ForceRenderer2D(body, {}, &forces.weightBody, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.weightLeftArm, "gravity", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.weightRightArm, "gravity", &drawables);
+    /* Gravity force visualization */
+    new DebugTools::ForceRenderer2D(vehicle, {}, &forces.weight, "weight", &drawables);
 
     /* Engine and friction forces visualization */
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "engines", &drawables);
@@ -231,11 +223,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
 
-    /* Tangent and normal forces visualization */
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalTangentLeftArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalTangentRightArm, "tangent", &drawables);
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalNormalLeftArm, "normal", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalNormalRightArm, "normal", &drawables);
+    /* Total forces visualization */
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalLeftArm, "total", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalRightArm, "total", &drawables);
 
     /* Zero-time physics step */
     physicsStep(state.physicsTime, parameters.physicsTimeDelta);
@@ -319,48 +309,23 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
 void Forces2D::physicsStep(const Float, const Float) {
     /* Compute tangent and normal vectors */
-    const Vector2 engineLeftArm(engineLeft->absoluteTransformation().rotation());
-    const Vector2 engineRightArm(engineRight->absoluteTransformation().rotation());
-    const Vector2 tangentLeftArm(armLeft->absoluteTransformation().rotation());
-    const Vector2 tangentRightArm(armRight->absoluteTransformation().rotation());
-    const Vector2 normalLeftArm = tangentLeftArm.perpendicular();
-    const Vector2 normalRightArm = tangentRightArm.perpendicular();
+    const Vector2 engineDirectionLeft(engineLeft->absoluteTransformation().rotation());
+    const Vector2 engineDirectionRight(engineRight->absoluteTransformation().rotation());
 
     /* Reset forces */
-    forces.totalNormalLeftArm = forces.totalNormalRightArm =
-        forces.totalTangentLeftArm = forces.totalTangentRightArm = {};
-
-    /* Propagate body weight to arms */
-    forces.totalNormalLeftArm += forces.weightBody.projectedOntoNormalized(normalLeftArm);
-    forces.totalNormalRightArm += forces.weightBody.projectedOntoNormalized(normalRightArm);
-
-    /* Decompose arm weight to normal and tangent */
-    forces.totalNormalLeftArm += forces.weightLeftArm.projectedOntoNormalized(normalLeftArm);
-    forces.totalNormalRightArm += forces.weightRightArm.projectedOntoNormalized(normalRightArm);
-    forces.totalTangentLeftArm += forces.weightLeftArm.projectedOntoNormalized(tangentLeftArm);
-    forces.totalTangentRightArm += forces.weightRightArm.projectedOntoNormalized(tangentRightArm);
+    forces.totalLeftArm = forces.totalRightArm =
+        forces.frictionLeftArm = forces.frictionRightArm = {};
 
     /* Add engine forces*/
-    forces.engineLeftArm = engineLeftArm*state.currentPowerLeftArm;
-    forces.engineRightArm = engineRightArm*state.currentPowerRightArm;
-    forces.totalTangentLeftArm += forces.engineLeftArm.projectedOntoNormalized(tangentLeftArm);
-    forces.totalTangentRightArm += forces.engineRightArm.projectedOntoNormalized(tangentRightArm);
-    forces.totalNormalLeftArm += forces.engineLeftArm.projectedOntoNormalized(normalLeftArm);
-    forces.totalNormalRightArm += forces.engineRightArm.projectedOntoNormalized(normalRightArm);
+    forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
+    forces.engineRightArm = engineDirectionRight*state.currentPowerRightArm;
+    forces.totalLeftArm += forces.engineLeftArm;
+    forces.totalRightArm += forces.engineRightArm;
 
-    /* Add friction forces to tangent */
-    forces.frictionLeftArm = -Math::sign(forces.totalTangentLeftArm)*Math::min(
-        Math::abs(tangentLeftArm*forces.totalNormalLeftArm.length()*parameters.friction),
-        Math::abs(forces.totalTangentLeftArm));
-    forces.frictionRightArm = -Math::sign(forces.totalTangentRightArm)*Math::min(
-        Math::abs(tangentRightArm*forces.totalNormalRightArm.length()*parameters.friction),
-        Math::abs(forces.totalTangentRightArm));
-    forces.totalTangentLeftArm += forces.frictionLeftArm;
-    forces.totalTangentRightArm += forces.frictionRightArm;
-
-    /* Ignore normal force, apply tangent ones */
-    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalTangentLeftArm);
-    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalTangentRightArm);
+    /* Apply forces */
+    applyForce(vehicle->absoluteTransformation().translation(), forces.weight);
+    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalLeftArm);
+    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalRightArm);
 }
 
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
