@@ -361,8 +361,8 @@ void Forces2D::physicsStep(const Float, const Float) {
     forces.totalTangentRightArm += forces.frictionRightArm;
 
     /* Ignore normal force, apply tangent ones */
-    applyForce(engineLeft->transformation().translation(), forces.totalTangentLeftArm);
-    applyForce(engineRight->transformation().translation(), forces.totalTangentRightArm);
+    applyForce(vehicle->transformation().rotation().transformVector(engineLeft->transformation().translation()), forces.totalTangentLeftArm);
+    applyForce(vehicle->transformation().rotation().transformVector(engineRight->transformation().translation()), forces.totalTangentRightArm);
 }
 
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
