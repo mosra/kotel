@@ -44,6 +44,7 @@ class Forces2D: public Platform::Application {
         void globalPhysicsStep(const Float time, const Float delta);
         void physicsStep(const Float time, const Float delta);
         void applyForce(const Vector2& position, const Vector2& force);
+        void applyImpulse(const Vector2& position, const Vector2& impulse);
 
         DebugTools::ResourceManager debugResourceManager;
 
@@ -331,6 +332,11 @@ void Forces2D::physicsStep(const Float, const Float) {
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
     state.force += force;
     state.torque += Vector2::cross(position - vehicle->absoluteTransformation().translation(), force);
+}
+
+void Forces2D::applyImpulse(const Vector2& position, const Vector2& impulse) {
+    state.linearVelocity += impulse*parameters.massInverted;
+    state.angularSpeed += Vector2::cross(position - vehicle->absoluteTransformation().translation(), impulse)*parameters.momentOfInertiaInverted;
 }
 
 }}
