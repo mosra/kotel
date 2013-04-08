@@ -71,12 +71,10 @@ class Forces2D: public Platform::Application {
         } forces;
 
         struct {
-            Float massBody,
-                massArm,
-                mass,
+            Float massInverted,
                 powerArm,
                 friction,
-                momentOfInertia;
+                momentOfInertiaInverted;
 
             Float physicsTimeDelta;
             Vector2 gravity;
@@ -145,9 +143,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     parameters.armAngle = Deg(110.0f);
     parameters.engineAngle = Deg(0.0f);
     parameters.armRadius = 1.0f;
-    parameters.massBody = 260.0f;
-    parameters.massArm = 80.0f;
-    parameters.mass = parameters.massBody + 2*parameters.massArm;
+    const Float massBody = 260.0f;
+    const Float massArm = 80.0f;
+    parameters.massInverted = 1.0f/(massBody + 2*massArm);
     parameters.powerArm = 1000.0f;
     parameters.friction = 0.16f;
 
@@ -172,9 +170,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->rotate(parameters.armAngle/2);
 
     /* Compute center of mass and move it to center of the object */
-    const Vector2 centerOfMass = (body->transformation().translation()*parameters.massBody +
+    const Vector2 centerOfMass = (body->transformation().translation()*massBody +
         (engineLeft->transformation().translation() + engineRight->transformation().translation())*
-        parameters.massArm)/parameters.mass;
+        massArm)*parameters.massInverted;
     vehicle->translate(centerOfMass);
     body->translate(-centerOfMass);
     armLeft->translate(-centerOfMass);
@@ -188,9 +186,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     forces.weightRightArm = parameters.gravity*parameters.massArm;
 
     /* Moment of inertia */
-    parameters.momentOfInertia = body->transformation().translation().dot()*parameters.massBody +
-        engineLeft->transformation().translation().dot()*parameters.massArm +
-        engineRight->transformation().translation().dot()*parameters.massArm;
+    parameters.momentOfInertiaInverted = 1.0f/(body->transformation().translation().dot()*massBody +
+        engineLeft->transformation().translation().dot()*massArm +
+        engineRight->transformation().translation().dot()*massArm);
 
     /* Tube and vehicle collision shapes */
     shapes.tubeMin = new Physics::Sphere2D({}, 0.99f);
@@ -301,12 +299,12 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
     state.torque = {};
     physicsStep(time, delta);
 
-    Vector2 linearVelocityIncrease = 0.5f*(state.force/parameters.mass)*delta;
-    Float angularSpeedIncrease(0.5f*(state.torque/parameters.momentOfInertia)*delta);
+    state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
+    state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
 
     /* New position and rotation (around COM) */
-    vehicle->translate((state.linearVelocity += linearVelocityIncrease)*delta)
-        ->rotate(Rad(state.angularSpeed += angularSpeedIncrease)*delta, SceneGraph::TransformationType::Local)
+    vehicle->translate(state.linearVelocity*delta)
+        ->rotate(Rad(state.angularSpeed*delta), SceneGraph::TransformationType::Local)
         ->normalizeRotation();
 
     /* Compute force at new position */
@@ -315,8 +313,8 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
     physicsStep(time+delta, delta);
 
     /* New velocity */
-    state.linearVelocity += 0.5f*(state.force/parameters.mass)*delta;
-    state.angularSpeed += 0.5f*(state.torque/parameters.momentOfInertia)*delta;
+    state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
+    state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
 }
 
 void Forces2D::physicsStep(const Float, const Float) {
