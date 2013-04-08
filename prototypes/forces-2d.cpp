@@ -121,13 +121,13 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Debug draw setup */
     debugResourceManager.set("weight", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("total", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.0005f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
+        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
         ->setPointSize(0.1f)->setColor(Color4<>::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
@@ -144,8 +144,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Float massBody = 260.0f;
     const Float massArm = 80.0f;
     parameters.massInverted = 1.0f/(massBody + 2*massArm);
-    parameters.powerArm = 1000.0f;
-    parameters.restitution = 0.3f;
+    parameters.powerArm = 500.0f;
+    parameters.restitution = 0.6f;
     parameters.friction = 0.16f;
 
     /* Object initialization */
