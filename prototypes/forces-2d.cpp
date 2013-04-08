@@ -72,6 +72,7 @@ class Forces2D: public Platform::Application {
         struct {
             Float massInverted,
                 powerArm,
+                restitution,
                 friction,
                 momentOfInertiaInverted;
 
@@ -144,6 +145,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Float massArm = 80.0f;
     parameters.massInverted = 1.0f/(massBody + 2*massArm);
     parameters.powerArm = 1000.0f;
+    parameters.restitution = 0.3f;
     parameters.friction = 0.16f;
 
     /* Object initialization */
@@ -292,6 +294,20 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
     state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
     state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
+
+    /* Check penetration */
+    collisionShapes.setClean();
+    for(Physics::Point2D* shape: {shapes.vehicleBody, shapes.vehicleArmLeft, shapes.vehicleArmRight}) {
+        if(*shape % *shapes.tubeMax) continue;
+
+        const Vector2 normal = -shape->transformedPosition();
+        const Vector2 position = shape->transformedPosition() - vehicle->absoluteTransformation().translation();
+        const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
+        const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
+            (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
+
+        applyImpulse(shape->transformedPosition(), impulse);
+    }
 
     /* New position and rotation (around COM) */
     vehicle->translate(state.linearVelocity*delta)
