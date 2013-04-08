@@ -361,13 +361,13 @@ void Forces2D::physicsStep(const Float, const Float) {
     forces.totalTangentRightArm += forces.frictionRightArm;
 
     /* Ignore normal force, apply tangent ones */
-    applyForce(vehicle->transformation().rotation().transformVector(engineLeft->transformation().translation()), forces.totalTangentLeftArm);
-    applyForce(vehicle->transformation().rotation().transformVector(engineRight->transformation().translation()), forces.totalTangentRightArm);
+    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalTangentLeftArm);
+    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalTangentRightArm);
 }
 
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
     state.force += force;
-    state.torque += Vector2::cross(position, force);
+    state.torque += Vector2::cross(position - vehicle->absoluteTransformation().translation(), force);
 }
 
 }}
