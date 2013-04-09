@@ -294,12 +294,11 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
     /* Check count of penetrations */
     UnsignedInt penetrationCount = 0;
-    Physics::Point2D* penetrations[3];
+    const Physics::Point2D* penetrations[3];
     collisionShapes.setClean();
-    for(Physics::Point2D* shape: {shapes.vehicleBody, shapes.vehicleArmLeft, shapes.vehicleArmRight}) {
-        if(!(*shape % *shapes.tubeMax))
-            penetrations[penetrationCount++] = shape;
-    }
+    const Physics::Point2D* const penetrationCandidates[3] = {shapes.vehicleBody, shapes.vehicleArmLeft, shapes.vehicleArmRight};
+    for(std::size_t i = 0; i != 3; ++i) if(!(*penetrationCandidates[i] % *shapes.tubeMax))
+        penetrations[penetrationCount++] = penetrationCandidates[i];
 
     /* Collision response */
     Vector2 normal;
