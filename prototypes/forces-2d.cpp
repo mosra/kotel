@@ -303,6 +303,11 @@ void Forces2D::keyPressEvent(KeyEvent& event) {
     } else if(event.key() == KeyEvent::Key::Right) {
         state.currentPowerLeftArm = parameters.powerArm;
         state.currentPowerRightArm = parameters.powerArm;
+    } else if(event.key() == KeyEvent::Key::R) {
+        vehicle->resetTransformation()->translate(Vector2::yAxis(0.3f));
+        state.currentPowerLeftArm = state.currentPowerRightArm =
+            state.angularSpeed = {};
+        state.linearVelocity = {};
     } else return;
 
     event.setAccepted();
