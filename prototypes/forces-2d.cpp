@@ -198,7 +198,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Vector2 centerOfMass = (body->transformation().translation()*massBody +
         (engineLeft->transformation().translation() + engineRight->transformation().translation())*
         massArm)*parameters.massInverted;
-    vehicle->translate(centerOfMass);
     body->translate(-centerOfMass);
     armLeft->translate(-centerOfMass);
     armRight->translate(-centerOfMass);
@@ -382,7 +381,7 @@ void Forces2D::physicsStep(const Float, const Float) {
     forces.totalLeftArm = forces.totalRightArm =
         forces.frictionLeftArm = forces.frictionRightArm = {};
 
-    /* Add engine forces*/
+    /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
     forces.engineRightArm = engineDirectionRight*state.currentPowerRightArm;
     forces.totalLeftArm += forces.engineLeftArm;
