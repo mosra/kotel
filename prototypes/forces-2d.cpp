@@ -265,11 +265,11 @@ void Forces2D::drawEvent() {
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::Left) {
-        state.currentPowerLeftArm = parameters.powerArm;
-        state.currentPowerRightArm = parameters.powerArm;
-    } else if(event.key() == KeyEvent::Key::Right) {
         state.currentPowerLeftArm = -parameters.powerArm;
         state.currentPowerRightArm = -parameters.powerArm;
+    } else if(event.key() == KeyEvent::Key::Right) {
+        state.currentPowerLeftArm = parameters.powerArm;
+        state.currentPowerRightArm = parameters.powerArm;
     } else return;
 
     event.setAccepted();
