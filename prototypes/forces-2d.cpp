@@ -292,18 +292,37 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
     state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
     state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
 
-    /* Check penetration */
+    /* Check count of penetrations */
+    UnsignedInt penetrationCount = 0;
+    Physics::Point2D* penetrations[3];
     collisionShapes.setClean();
     for(Physics::Point2D* shape: {shapes.vehicleBody, shapes.vehicleArmLeft, shapes.vehicleArmRight}) {
-        if(*shape % *shapes.tubeMax) continue;
+        if(!(*shape % *shapes.tubeMax))
+            penetrations[penetrationCount++] = shape;
+    }
 
-        const Vector2 normal = -shape->transformedPosition();
-        const Vector2 position = shape->transformedPosition() - vehicle->absoluteTransformation().translation();
-        const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
-        const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
-            (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
+    /* Collision response */
+    Vector2 normal;
+    switch(penetrationCount) {
+        /* No collisions, nothing to do */
+        case 0: break;
 
-        applyImpulse(shape->transformedPosition(), impulse);
+        /* One or two collision, compute proper normal and position */
+        case 2:
+            normal -= penetrations[1]->transformedPosition();
+        case 1: {
+            normal -= penetrations[0]->transformedPosition();
+            const Vector2 absolutePosition = normal/penetrationCount;
+            const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
+            const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
+            const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
+                (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
+
+            applyImpulse(absolutePosition, impulse);
+        }; break;
+
+        /* Three collisions shouldn't happen */
+        default: CORRADE_ASSERT(false, "The vehicle escaped the known universe!", );
     }
 
     /* New position and rotation (around COM) */
