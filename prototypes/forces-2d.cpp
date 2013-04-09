@@ -58,6 +58,7 @@ namespace Kotel { namespace Prototype {
 class Forces2D: public Platform::Application {
     public:
         explicit Forces2D(const Arguments& arguments);
+        ~Forces2D();
 
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
@@ -258,6 +259,15 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Zero-time physics step */
     physicsStep(state.physicsTime, parameters.physicsTimeDelta);
     timeline.start();
+}
+
+Forces2D::~Forces2D() {
+    /* Delete things which are not garbage collected by SceneGraph */
+    delete shapes.tubeMin;
+    delete shapes.tubeMax;
+    delete shapes.vehicleBody;
+    delete shapes.vehicleArmLeft;
+    delete shapes.vehicleArmRight;
 }
 
 void Forces2D::viewportEvent(const Vector2i& size) {
