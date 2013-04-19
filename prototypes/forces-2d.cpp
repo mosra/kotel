@@ -58,7 +58,6 @@ namespace Kotel { namespace Prototype {
 class Forces2D: public Platform::Application {
     public:
         explicit Forces2D(const Arguments& arguments);
-        ~Forces2D();
 
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
@@ -83,8 +82,8 @@ class Forces2D: public Platform::Application {
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 
         struct {
-            Physics::Sphere2D *tubeMin, *tubeMax;
-            Physics::Point2D *vehicleBody, *vehicleArmLeft, *vehicleArmRight;
+            Physics::Sphere2D tubeMin, tubeMax;
+            Physics::Point2D vehicleBody, vehicleArmLeft, vehicleArmRight;
         } shapes;
 
         struct {
@@ -213,16 +212,16 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineRight->transformation().translation().dot()*massArm);
 
     /* Tube and vehicle collision shapes */
-    shapes.tubeMin = new Physics::Sphere2D({}, 0.99f);
-    shapes.tubeMax = new Physics::Sphere2D({}, 1.01f);
-    shapes.vehicleBody = new Physics::Point2D(body->transformation().translation()+Vector2::yAxis(0.15f));
-    shapes.vehicleArmLeft = new Physics::Point2D(engineLeft->transformation().translation());
-    shapes.vehicleArmRight = new Physics::Point2D(engineRight->transformation().translation());
+    shapes.tubeMin.setRadius(0.99f);
+    shapes.tubeMax.setRadius(1.01f);
+    shapes.vehicleBody.setPosition(body->transformation().translation()+Vector2::yAxis(0.15f));
+    shapes.vehicleArmLeft.setPosition(engineLeft->transformation().translation());
+    shapes.vehicleArmRight.setPosition(engineRight->transformation().translation());
     new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &collisionShapes))
-        ->setShape(std::ref(*shapes.tubeMin) || std::ref(*shapes.tubeMax)),
+        ->setShape(std::ref(shapes.tubeMin) || std::ref(shapes.tubeMax)),
         "collision", &drawables);
     new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(vehicle, &collisionShapes))
-        ->setShape(std::ref(*shapes.vehicleBody) || std::ref(*shapes.vehicleArmLeft) || std::ref(*shapes.vehicleArmRight)),
+        ->setShape(std::ref(shapes.vehicleBody) || std::ref(shapes.vehicleArmLeft) || std::ref(shapes.vehicleArmRight)),
         "collision", &drawables);
 
     /* Vehicle visualization */
@@ -258,15 +257,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Zero-time physics step */
     physicsStep(state.physicsTime, parameters.physicsTimeDelta);
     timeline.start();
-}
-
-Forces2D::~Forces2D() {
-    /* Delete things which are not garbage collected by SceneGraph */
-    delete shapes.tubeMin;
-    delete shapes.tubeMax;
-    delete shapes.vehicleBody;
-    delete shapes.vehicleArmLeft;
-    delete shapes.vehicleArmRight;
 }
 
 void Forces2D::viewportEvent(const Vector2i& size) {
@@ -334,8 +324,10 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
     UnsignedInt penetrationCount = 0;
     const Physics::Point2D* penetrations[3];
     collisionShapes.setClean();
-    const Physics::Point2D* const penetrationCandidates[3] = {shapes.vehicleBody, shapes.vehicleArmLeft, shapes.vehicleArmRight};
-    for(std::size_t i = 0; i != 3; ++i) if(!(*penetrationCandidates[i] % *shapes.tubeMax))
+    const Physics::Point2D* const penetrationCandidates[3] = {
+        &shapes.vehicleBody, &shapes.vehicleArmLeft, &shapes.vehicleArmRight
+    };
+    for(std::size_t i = 0; i != 3; ++i) if(!(*penetrationCandidates[i] % shapes.tubeMax))
         penetrations[penetrationCount++] = penetrationCandidates[i];
 
     /* Collision response */
