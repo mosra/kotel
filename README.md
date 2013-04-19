@@ -13,7 +13,10 @@ Demos and prototypes
 Various demos, physics and gameplay prototypes are available in `prototypes/`
 subdirectory and also online running in Google Chrome Native Client:
 
-*   **Forces2D** -- http://mosra.github.io/kotel/forces-2d.html
+*   **Forces2D** -- http://mosra.github.io/kotel/forces-2d.html -- 2D physics
+    interaction with gravity, engine forces and collision detection. Use
+    **left/right arrow** to control the engines and **R key** to reset the
+    vehicle.
 
 You need Google Chrome 22 or higher with working Native Client and OpenGL.
 Native Client is disabled by default and only apps from Chrome Web Store are
