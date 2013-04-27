@@ -25,10 +25,10 @@
 find_package(Magnum REQUIRED
     DebugTools
     MeshTools
-    Physics
     Primitives
     SceneGraph
-    Shaders)
+    Shaders
+    Shapes)
 
 if(NOT CORRADE_TARGET_NACL)
     find_package(Magnum REQUIRED Sdl2Application)
@@ -49,10 +49,10 @@ target_link_libraries(forces-2d
     ${MAGNUM_LIBRARIES}
     ${MAGNUM_DEBUGTOOLS_LIBRARIES}
     ${MAGNUM_MESHTOOLS_LIBRARIES}
-    ${MAGNUM_PHYSICS_LIBRARIES}
     ${MAGNUM_PRIMITIVES_LIBRARIES}
     ${MAGNUM_SCENEGRAPH_LIBRARIES}
     ${MAGNUM_SHADERS_LIBRARIES}
+    ${MAGNUM_SHAPES_LIBRARIES}
     ${MAGNUM_APPLICATION_LIBRARIES})
 
 if(CORRADE_TARGET_NACL)

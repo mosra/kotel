@@ -39,13 +39,13 @@
 #include <SceneGraph/DualComplexTransformation.h>
 #include <SceneGraph/Object.h>
 #include <SceneGraph/Scene.h>
-#include <Physics/ObjectShape.h>
-#include <Physics/ObjectShapeGroup.h>
-#include <Physics/Box.h>
-#include <Physics/LineSegment.h>
-#include <Physics/Point.h>
-#include <Physics/ShapeGroup.h>
-#include <Physics/Sphere.h>
+#include <Shapes/Composition.h>
+#include <Shapes/Box.h>
+#include <Shapes/LineSegment.h>
+#include <Shapes/Point.h>
+#include <Shapes/Shape.h>
+#include <Shapes/ShapeGroup.h>
+#include <Shapes/Sphere.h>
 
 #ifdef MAGNUM_BUILD_STATIC
 #include <Shaders/magnumShadersResourceImport.hpp>
@@ -77,13 +77,13 @@ class Forces2D: public Platform::Application {
         Object2D cameraObject;
         SceneGraph::Camera2D<> *camera;
         SceneGraph::DrawableGroup<2> drawables;
-        Physics::ObjectShapeGroup2D visualizationShapes, collisionShapes;
+        Shapes::ShapeGroup2D visualizationShapes, collisionShapes;
 
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 
         struct {
-            Physics::Sphere2D tubeMin, tubeMax;
-            Physics::Point2D vehicleBody, vehicleArmLeft, vehicleArmRight;
+            Shapes::Shape<Shapes::Sphere2D>* tubeMin;
+            Shapes::Shape<Shapes::Composition2D> *tubeMax, *vehicle;
         } shapes;
 
         struct {
@@ -211,32 +211,32 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineLeft->transformation().translation().dot()*massArm +
         engineRight->transformation().translation().dot()*massArm);
 
-    /* Tube and vehicle collision shapes */
-    shapes.tubeMin.setRadius(0.99f);
-    shapes.tubeMax.setRadius(1.01f);
-    shapes.vehicleBody.setPosition(body->transformation().translation()+Vector2::yAxis(0.15f));
-    shapes.vehicleArmLeft.setPosition(engineLeft->transformation().translation());
-    shapes.vehicleArmRight.setPosition(engineRight->transformation().translation());
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(tube, &collisionShapes))
-        ->setShape(std::ref(shapes.tubeMin) || std::ref(shapes.tubeMax)),
-        "collision", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(vehicle, &collisionShapes))
-        ->setShape(std::ref(shapes.vehicleBody) || std::ref(shapes.vehicleArmLeft) || std::ref(shapes.vehicleArmRight)),
-        "collision", &drawables);
+    /* Tube collision shapes */
+    shapes.tubeMin = new Shapes::Shape<Shapes::Sphere2D>(tube, {{}, 0.99f}, &collisionShapes);
+    new DebugTools::ShapeRenderer2D(shapes.tubeMin, "collision", &drawables);
+    shapes.tubeMax = new Shapes::Shape<Shapes::Composition2D>(tube, !Shapes::Sphere2D({}, 1.01f), &collisionShapes);
+    new DebugTools::ShapeRenderer2D(shapes.tubeMax, "collision", &drawables);
+
+    /* Vehicle collision shapes */
+    shapes.vehicle = new Shapes::Shape<Shapes::Composition2D>(vehicle,
+        Shapes::Point2D(body->transformation().translation()+Vector2::yAxis(0.15f)) ||
+        Shapes::Point2D(engineLeft->transformation().translation()) ||
+        Shapes::Point2D(engineRight->transformation().translation()), &collisionShapes);
+    new DebugTools::ShapeRenderer2D(shapes.vehicle, "collision", &drawables);
 
     /* Vehicle visualization */
-    const auto armA = Vector2::yAxis(parameters.armRadius-0.2f);
-    const auto armB = Vector2::yAxis(0.03f);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(body, &visualizationShapes))
-        ->setShape(Physics::Sphere2D({}, 0.2f)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armLeft, &visualizationShapes))
-        ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(armRight, &visualizationShapes))
-        ->setShape(Physics::LineSegment2D(armA, armB)), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineLeft, &visualizationShapes))
-        ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D((new Physics::ObjectShape2D(engineRight, &visualizationShapes))
-        ->setShape(Physics::Box2D(Matrix3::scaling({0.1f, 0.03f}))), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Sphere2D>(body,
+        {{}, 0.2f}, &visualizationShapes), "vehicle", &drawables);
+    const Shapes::LineSegment2D arm(Vector2::yAxis(parameters.armRadius-0.2f), Vector2::yAxis(0.03f));
+    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::LineSegment2D>(armLeft,
+        arm, &visualizationShapes), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::LineSegment2D>(armRight,
+        arm, &visualizationShapes), "vehicle", &drawables);
+    const Shapes::Box2D engine(Matrix3::scaling({0.1f, 0.03f}));
+    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Box2D>(engineLeft,
+        engine, &visualizationShapes), "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Box2D>(engineRight,
+        engine, &visualizationShapes), "vehicle", &drawables);
 
     /* Vehicle center-of-mass visualization */
     new DebugTools::ObjectRenderer2D(vehicle, "parameters", &drawables);
@@ -278,7 +278,6 @@ void Forces2D::drawEvent() {
     }
 
     visualizationShapes.setClean();
-    collisionShapes.setClean();
     camera->draw(drawables);
 
     swapBuffers();
@@ -322,13 +321,12 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
     /* Check count of penetrations */
     UnsignedInt penetrationCount = 0;
-    const Physics::Point2D* penetrations[3];
-    collisionShapes.setClean();
-    const Physics::Point2D* const penetrationCandidates[3] = {
-        &shapes.vehicleBody, &shapes.vehicleArmLeft, &shapes.vehicleArmRight
-    };
-    for(std::size_t i = 0; i != 3; ++i) if(!(*penetrationCandidates[i] % shapes.tubeMax))
-        penetrations[penetrationCount++] = penetrationCandidates[i];
+    const Shapes::Point2D* penetrations[3];
+    for(std::size_t i = 0; i != 3; ++i) {
+        const auto* p = &shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
+        if(!(*p % shapes.tubeMin->transformedShape()))
+            penetrations[penetrationCount++] = p;
+    }
 
     /* Collision response */
     Vector2 normal;
@@ -338,9 +336,9 @@ void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
 
         /* One or two collision, compute proper normal and position */
         case 2:
-            normal -= penetrations[1]->transformedPosition();
+            normal -= penetrations[1]->position();
         case 1: {
-            normal -= penetrations[0]->transformedPosition();
+            normal -= penetrations[0]->position();
             const Vector2 absolutePosition = normal/penetrationCount;
             const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
             const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
