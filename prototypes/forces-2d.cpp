@@ -65,7 +65,7 @@ class Forces2D: public Platform::Application {
         void keyReleaseEvent(KeyEvent& event) override;
 
     private:
-        void globalPhysicsStep(Float time, Float delta);
+        void globalPhysicsStep(Float totalDelta);
         void physicsStep(Float time, Float delta);
         void applyForce(const Vector2& position, const Vector2& force);
         void applyImpulse(const Vector2& position, const Vector2& impulse);
@@ -255,7 +255,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalRightArm, "total", &drawables);
 
     /* Zero-time physics step */
-    physicsStep(state.physicsTime, parameters.physicsTimeDelta);
     timeline.start();
 }
 
@@ -270,12 +269,7 @@ void Forces2D::drawEvent() {
     defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
 
     /* Do physics steps in elapsed time */
-    state.physicsTimeAccumulator += timeline.previousFrameDuration();
-    while(state.physicsTimeAccumulator >= parameters.physicsTimeDelta) {
-        globalPhysicsStep(state.physicsTime, parameters.physicsTimeDelta);
-        state.physicsTimeAccumulator -= parameters.physicsTimeDelta;
-        state.physicsTime += parameters.physicsTimeDelta;
-    }
+    globalPhysicsStep(timeline.previousFrameDuration());
 
     visualizationShapes.setClean();
     camera->draw(drawables);
@@ -310,61 +304,78 @@ void Forces2D::keyReleaseEvent(KeyEvent& event) {
     redraw();
 }
 
-void Forces2D::globalPhysicsStep(const Float time, const Float delta) {
-    /* Compute force and torque at original position */
-    state.force = {};
-    state.torque = {};
-    physicsStep(time, delta);
+void Forces2D::globalPhysicsStep(const Float totalDelta) {
+    state.physicsTimeAccumulator += totalDelta;
 
-    state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
-    state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
+    Float delta = parameters.physicsTimeDelta;
 
-    /* Check count of penetrations */
-    UnsignedInt penetrationCount = 0;
-    const Shapes::Point2D* penetrations[3];
-    for(std::size_t i = 0; i != 3; ++i) {
-        const auto* p = &shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
-        if(!(*p % shapes.tubeMin->transformedShape()))
-            penetrations[penetrationCount++] = p;
+    while(state.physicsTimeAccumulator >= delta) {
+        /* Compute force and torque at original position */
+        state.force = {};
+        state.torque = {};
+        physicsStep(state.physicsTime, delta);
+
+        state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
+        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
+
+        /* Check penetrations */
+        if(shapes.vehicle->collides(shapes.tubeMax) && delta > 1/1000.0f) {
+            delta /= 2;
+            continue;
+        }
+
+        delta = parameters.physicsTimeDelta;
+
+        /* Check count of penetrations */
+        UnsignedInt penetrationCount = 0;
+        const Shapes::Point2D* penetrations[3];
+        for(std::size_t i = 0; i != 3; ++i) {
+            const auto* p = &shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
+            if(!(*p % shapes.tubeMin->transformedShape()))
+                penetrations[penetrationCount++] = p;
+        }
+
+        /* Collision response */
+        Vector2 normal;
+        switch(penetrationCount) {
+            /* No collisions, nothing to do */
+            case 0: break;
+
+            /* One or two collision, compute proper normal and position */
+            case 2:
+                normal -= penetrations[1]->position();
+            case 1: {
+                normal -= penetrations[0]->position();
+                const Vector2 absolutePosition = normal/penetrationCount;
+                const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
+                const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
+                const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
+                    (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
+
+                applyImpulse(absolutePosition, impulse);
+            }; break;
+
+            /* Three collisions shouldn't happen */
+            default: CORRADE_ASSERT(false, "The vehicle escaped the known universe!", );
+        }
+
+        /* New position and rotation (around COM) */
+        vehicle->translate(state.linearVelocity*delta)
+            ->rotate(Rad(state.angularSpeed*delta), SceneGraph::TransformationType::Local)
+            ->normalizeRotation();
+
+        /* Compute force at new position */
+        state.force = {};
+        state.torque = {};
+        physicsStep(state.physicsTime+delta, delta);
+
+        /* New velocity */
+        state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
+        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
+
+        state.physicsTimeAccumulator -= delta;
+        state.physicsTime += delta;
     }
-
-    /* Collision response */
-    Vector2 normal;
-    switch(penetrationCount) {
-        /* No collisions, nothing to do */
-        case 0: break;
-
-        /* One or two collision, compute proper normal and position */
-        case 2:
-            normal -= penetrations[1]->position();
-        case 1: {
-            normal -= penetrations[0]->position();
-            const Vector2 absolutePosition = normal/penetrationCount;
-            const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
-            const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
-            const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
-                (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
-
-            applyImpulse(absolutePosition, impulse);
-        }; break;
-
-        /* Three collisions shouldn't happen */
-        default: CORRADE_ASSERT(false, "The vehicle escaped the known universe!", );
-    }
-
-    /* New position and rotation (around COM) */
-    vehicle->translate(state.linearVelocity*delta)
-        ->rotate(Rad(state.angularSpeed*delta), SceneGraph::TransformationType::Local)
-        ->normalizeRotation();
-
-    /* Compute force at new position */
-    state.force = {};
-    state.torque = {};
-    physicsStep(time+delta, delta);
-
-    /* New velocity */
-    state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
-    state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
 }
 
 void Forces2D::physicsStep(const Float, const Float) {
