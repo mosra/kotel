@@ -265,8 +265,8 @@ void Forces2D::viewportEvent(const Vector2i& size) {
 }
 
 void Forces2D::drawEvent() {
-    defaultFramebuffer.bind(DefaultFramebuffer::Target::Draw);
-    defaultFramebuffer.clear(DefaultFramebuffer::Clear::Color);
+    defaultFramebuffer.bind(FramebufferTarget::Draw);
+    defaultFramebuffer.clear(FramebufferClear::Color);
 
     /* Do physics steps in elapsed time */
     globalPhysicsStep(timeline.previousFrameDuration());
