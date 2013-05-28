@@ -385,14 +385,14 @@ void Forces2D::globalPhysicsStep(const Float delta) {
 }
 
 void Forces2D::physicsStep(const Float, const Float) {
-    /* Compute tangent and normal vectors */
-    const Vector2 engineDirectionLeft(engineLeft->absoluteTransformation().rotation());
-    const Vector2 engineDirectionRight(engineRight->absoluteTransformation().rotation());
-
     /* Reset forces */
     forces.totalLeftArm = forces.totalRightArm =
         forces.frictionLeftArm = forces.frictionRightArm =
             forces.spring[0] = forces.spring[1] = forces.spring[2] = {};
+
+    /* Get engine force direction from transformations */
+    const Vector2 engineDirectionLeft(engineLeft->absoluteTransformation().rotation());
+    const Vector2 engineDirectionRight(engineRight->absoluteTransformation().rotation());
 
     /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
