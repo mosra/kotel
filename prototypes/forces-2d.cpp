@@ -173,7 +173,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Float massBody = 260.0f;
     const Float massArm = 80.0f;
     parameters.massInverted = 1.0f/(massBody + 2*massArm);
-    parameters.powerArm = 500.0f;
+    parameters.powerArm = 2500.0f;
     parameters.restitution = 0.6f;
     parameters.friction = 0.16f;
     parameters.springConstant = 1000000; /** @todo Is this in sane range? */
