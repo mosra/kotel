@@ -65,7 +65,7 @@ class Forces2D: public Platform::Application {
         void keyReleaseEvent(KeyEvent& event) override;
 
     private:
-        void globalPhysicsStep(Float totalDelta);
+        void globalPhysicsStep(Float delta);
         void physicsStep(Float time, Float delta);
         void applyForce(const Vector2& position, const Vector2& force);
         void applyImpulse(const Vector2& position, const Vector2& impulse);
@@ -313,27 +313,17 @@ void Forces2D::keyReleaseEvent(KeyEvent& event) {
     redraw();
 }
 
-void Forces2D::globalPhysicsStep(const Float totalDelta) {
-    state.physicsTimeAccumulator += totalDelta;
+void Forces2D::globalPhysicsStep(const Float delta) {
+    state.physicsTimeAccumulator += delta;
 
-    Float delta = parameters.physicsTimeDelta;
-
-    while(state.physicsTimeAccumulator >= delta) {
+    while(state.physicsTimeAccumulator >= parameters.physicsTimeDelta) {
         /* Compute force and torque at original position */
         state.force = {};
         state.torque = {};
-        physicsStep(state.physicsTime, delta);
+        physicsStep(state.physicsTime, parameters.physicsTimeDelta);
 
-        state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
-        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
-
-        /* Check penetrations */
-        if(shapes.vehicle->collides(shapes.tubeMax) && delta > 1/1000.0f) {
-            delta /= 2;
-            continue;
-        }
-
-        delta = parameters.physicsTimeDelta;
+        state.linearVelocity += 0.5f*state.force*parameters.massInverted*parameters.physicsTimeDelta;
+        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*parameters.physicsTimeDelta;
 
         /* Check count of penetrations */
         UnsignedInt penetrationCount = 0;
@@ -376,21 +366,21 @@ void Forces2D::globalPhysicsStep(const Float totalDelta) {
         }
 
         /* New position and rotation (around COM) */
-        vehicle->translate(state.linearVelocity*delta)
-            ->rotate(Rad(state.angularSpeed*delta), SceneGraph::TransformationType::Local)
+        vehicle->translate(state.linearVelocity*parameters.physicsTimeDelta)
+            ->rotate(Rad(state.angularSpeed*parameters.physicsTimeDelta), SceneGraph::TransformationType::Local)
             ->normalizeRotation();
 
         /* Compute force at new position */
         state.force = {};
         state.torque = {};
-        physicsStep(state.physicsTime+delta, delta);
+        physicsStep(state.physicsTime+parameters.physicsTimeDelta, parameters.physicsTimeDelta);
 
         /* New velocity */
-        state.linearVelocity += 0.5f*state.force*parameters.massInverted*delta;
-        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*delta;
+        state.linearVelocity += 0.5f*state.force*parameters.massInverted*parameters.physicsTimeDelta;
+        state.angularSpeed += 0.5f*state.torque*parameters.momentOfInertiaInverted*parameters.physicsTimeDelta;
 
-        state.physicsTimeAccumulator -= delta;
-        state.physicsTime += delta;
+        state.physicsTimeAccumulator -= parameters.physicsTimeDelta;
+        state.physicsTime += parameters.physicsTimeDelta;
     }
 }
 
