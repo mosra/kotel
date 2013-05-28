@@ -91,6 +91,8 @@ class Forces2D: public Platform::Application {
                 engineLeftArm, engineRightArm,
                 frictionLeftArm, frictionRightArm,
                 totalLeftArm, totalRightArm;
+
+            Vector2 spring[3];
         } forces;
 
         struct {
@@ -98,6 +100,7 @@ class Forces2D: public Platform::Application {
                 powerArm,
                 restitution,
                 friction,
+                springConstant,
                 momentOfInertiaInverted;
 
             Float physicsTimeDelta;
@@ -150,6 +153,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
         ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
+    debugResourceManager.set("spring", (new DebugTools::ForceRendererOptions)
+        ->setSize(0.000025f)->setColor(Color4<>(1.0f, 1.0f)));
     debugResourceManager.set("total", (new DebugTools::ForceRendererOptions)
         ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
@@ -171,6 +176,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     parameters.powerArm = 500.0f;
     parameters.restitution = 0.6f;
     parameters.friction = 0.16f;
+    parameters.springConstant = 1000000; /** @todo Is this in sane range? */
 
     /* Object initialization */
     tube = new Object2D(&scene);
@@ -244,11 +250,14 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Gravity force visualization */
     new DebugTools::ForceRenderer2D(vehicle, {}, &forces.weight, "weight", &drawables);
 
-    /* Engine and friction forces visualization */
+    /* Engine, friction and spring forces visualization */
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "engines", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "engines", &drawables);
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
+    for(std::size_t i = 0; i != 3; ++i)
+        new DebugTools::ForceRenderer2D(vehicle, shapes.vehicle->shape().get<Shapes::Point2D>(i).position(),
+            &forces.spring[i], "spring", &drawables);
 
     /* Total forces visualization */
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalLeftArm, "total", &drawables);
@@ -349,8 +358,15 @@ void Forces2D::globalPhysicsStep(const Float totalDelta) {
                 const Vector2 absolutePosition = normal/penetrationCount;
                 const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
                 const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
-                const Vector2 impulse = (-(1.0f + parameters.restitution)*Vector2::dot(velocity, normal)/
-                    (normal.dot()*parameters.massInverted + Math::pow<2>(Vector2::cross(position, normal))*parameters.momentOfInertiaInverted))*normal;
+
+                /* Impulse in direction of the normal, don't allow it to go in
+                   wrong direction (i.e. when the spring forces are already
+                   doing the collision response */
+                const Vector2 impulse = Math::max(0.0f,
+                    -(parameters.restitution + 1.0f)*Vector2::dot(velocity, normal)/(
+                        parameters.massInverted*normal.dot() +
+                        parameters.momentOfInertiaInverted*Math::pow<2>(Vector2::cross(position, normal))
+                    ))*normal;
 
                 applyImpulse(absolutePosition, impulse);
             }; break;
@@ -385,7 +401,8 @@ void Forces2D::physicsStep(const Float, const Float) {
 
     /* Reset forces */
     forces.totalLeftArm = forces.totalRightArm =
-        forces.frictionLeftArm = forces.frictionRightArm = {};
+        forces.frictionLeftArm = forces.frictionRightArm =
+            forces.spring[0] = forces.spring[1] = forces.spring[2] = {};
 
     /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
@@ -397,6 +414,18 @@ void Forces2D::physicsStep(const Float, const Float) {
     applyForce(vehicle->absoluteTransformation().translation(), forces.weight);
     applyForce(engineLeft->absoluteTransformation().translation(), forces.totalLeftArm);
     applyForce(engineLeft->absoluteTransformation().translation(), forces.totalRightArm);
+
+    /* Apply spring forces for all penetrations */
+    collisionShapes.setClean();
+    for(std::size_t i = 0; i != 3; ++i) {
+        const auto& p = shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
+        if(p % shapes.tubeMin->transformedShape()) continue;
+
+        /* Spring force is proportional to penetration depth */
+        forces.spring[i] = p.position()*(parameters.springConstant*
+            (shapes.tubeMin->shape().radius()*p.position().lengthInverted() - 1.0f));
+        applyForce(p.position(), forces.spring[i]);
+    }
 }
 
 void Forces2D::applyForce(const Vector2& position, const Vector2& force) {
