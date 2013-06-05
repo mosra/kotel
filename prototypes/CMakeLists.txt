@@ -57,5 +57,8 @@ target_link_libraries(forces-2d
 
 if(CORRADE_TARGET_NACL)
     install(TARGETS forces-2d DESTINATION ${CMAKE_INSTALL_PREFIX})
-    install(FILES forces-2d.html forces-2d.nmf DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES
+        prototypes.css prototypes.js
+        forces-2d.html forces-2d.nmf
+        DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
