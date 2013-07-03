@@ -75,8 +75,8 @@ class Forces2D: public Platform::Application {
         Timeline timeline;
         Scene2D scene;
         Object2D cameraObject;
-        SceneGraph::Camera2D<> *camera;
-        SceneGraph::DrawableGroup<2> drawables;
+        SceneGraph::Camera2D *camera;
+        SceneGraph::DrawableGroup2D drawables;
         Shapes::ShapeGroup2D visualizationShapes, collisionShapes;
 
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
@@ -136,31 +136,31 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         createContext(conf->setSampleCount(0));
     } else delete conf;
 
-    Renderer::setClearColor(Color3<>(0.125f));
+    Renderer::setClearColor(Color3(0.125f));
     Renderer::setFeature(Renderer::Feature::Blending, true);
     Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* Camera setup */
     cameraObject.setParent(&scene);
-    (camera = new SceneGraph::Camera2D<>(&cameraObject))
+    (camera = new SceneGraph::Camera2D(&cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         ->setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
     debugResourceManager.set("weight", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
+        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("spring", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.000025f)->setColor(Color4<>(1.0f, 1.0f)));
+        ->setSize(0.000025f)->setColor(Color4(1.0f, 1.0f)));
     debugResourceManager.set("total", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4<>::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
+        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
-        ->setPointSize(0.1f)->setColor(Color4<>::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
+        ->setPointSize(0.1f)->setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
-        ->setColor(Color3<>(0.5f)));
+        ->setColor(Color3(0.5f)));
     debugResourceManager.set("parameters", (new DebugTools::ObjectRendererOptions)
         ->setSize(0.1f));
 

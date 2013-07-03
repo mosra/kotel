@@ -31,8 +31,8 @@ namespace Kotel {
 
 using namespace Magnum;
 
-typedef SceneGraph::Object<SceneGraph::DualComplexTransformation<>> Object2D;
-typedef SceneGraph::Scene<SceneGraph::DualComplexTransformation<>> Scene2D;
+typedef SceneGraph::Object<SceneGraph::DualComplexTransformation> Object2D;
+typedef SceneGraph::Scene<SceneGraph::DualComplexTransformation> Scene2D;
 
 }
 
