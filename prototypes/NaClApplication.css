@@ -40,3 +40,12 @@ h1 {
     font-weight: bold;
     z-index: 9;
 }
+
+#statusDescription {
+    position: absolute;
+    width: 640px;
+    text-align: center;
+    top: 250px;
+    font-size: 15px;
+    z-index: 9;
+}
