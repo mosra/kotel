@@ -403,7 +403,7 @@ void Forces2D::physicsStep(const Float, const Float) {
     /* Apply forces */
     applyForce(vehicle->absoluteTransformation().translation(), forces.weight);
     applyForce(engineLeft->absoluteTransformation().translation(), forces.totalLeftArm);
-    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalRightArm);
+    applyForce(engineRight->absoluteTransformation().translation(), forces.totalRightArm);
 
     /* Apply spring forces for all penetrations */
     collisionShapes.setClean();
