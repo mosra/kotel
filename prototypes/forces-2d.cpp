@@ -126,15 +126,15 @@ class Forces2D: public Platform::Application {
 
 Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments, nullptr), state() {
     /* Try to create MSAA context */
-    auto conf = new Configuration();
+    Configuration conf;
     #ifndef CORRADE_TARGET_NACL
-    conf->setTitle("Kotel::Prototype::Forces2D");
+    conf.setTitle("Kotel::Prototype::Forces2D");
     #endif
-    conf->setSampleCount(16);
+    conf.setSampleCount(16);
     if(!tryCreateContext(conf)) {
         Warning() << "Cannot enable 16x MSAA, fallback to no-AA rendering";
-        createContext(conf->setSampleCount(0));
-    } else delete conf;
+        createContext(conf.setSampleCount(0));
+    }
 
     Renderer::setClearColor(Color3(0.125f));
     Renderer::setFeature(Renderer::Feature::Blending, true);
