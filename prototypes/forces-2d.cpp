@@ -380,8 +380,8 @@ void Forces2D::physicsStep(const Float, const Float) {
             forces.spring[0] = forces.spring[1] = forces.spring[2] = {};
 
     /* Get engine force direction from transformations */
-    const Vector2 engineDirectionLeft(engineLeft->absoluteTransformation().rotation());
-    const Vector2 engineDirectionRight(engineRight->absoluteTransformation().rotation());
+    const auto engineDirectionLeft = Vector2(engineLeft->absoluteTransformation().rotation());
+    const auto engineDirectionRight = Vector2(engineRight->absoluteTransformation().rotation());
 
     /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
