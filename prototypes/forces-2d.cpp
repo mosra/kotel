@@ -87,12 +87,9 @@ class Forces2D: public Platform::Application {
         } shapes;
 
         struct {
-            Vector2 weight,
-                engineLeftArm, engineRightArm,
-                frictionLeftArm, frictionRightArm,
-                totalLeftArm, totalRightArm;
-
+            Vector2 weight, engineLeftArm, engineRightArm;
             Vector2 spring[3];
+            Vector2 friction[3];
         } forces;
 
         struct {
@@ -147,16 +144,12 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
-    debugResourceManager.set("weight", (new DebugTools::ForceRendererOptions)
+    debugResourceManager.set("primaryForces", (new DebugTools::ForceRendererOptions)
         ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("engines", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(50.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
         ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("spring", (new DebugTools::ForceRendererOptions)
         ->setSize(0.000025f)->setColor(Color4(1.0f, 1.0f)));
-    debugResourceManager.set("total", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(245.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
         ->setPointSize(0.1f)->setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
     debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
@@ -248,20 +241,16 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     new DebugTools::ObjectRenderer2D(vehicle, "parameters", &drawables);
 
     /* Gravity force visualization */
-    new DebugTools::ForceRenderer2D(vehicle, {}, &forces.weight, "weight", &drawables);
+    new DebugTools::ForceRenderer2D(vehicle, {}, &forces.weight, "primaryForces", &drawables);
 
     /* Engine, friction and spring forces visualization */
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "engines", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "engines", &drawables);
+    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "primaryForces", &drawables);
+    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "primaryForces", &drawables);
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
     for(std::size_t i = 0; i != 3; ++i)
         new DebugTools::ForceRenderer2D(vehicle, shapes.vehicle->shape().get<Shapes::Point2D>(i).position(),
             &forces.spring[i], "spring", &drawables);
-
-    /* Total forces visualization */
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.totalLeftArm, "total", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.totalRightArm, "total", &drawables);
 
     /* Zero-time physics step */
     timeline.start();
@@ -386,8 +375,8 @@ void Forces2D::globalPhysicsStep(const Float delta) {
 
 void Forces2D::physicsStep(const Float, const Float) {
     /* Reset forces */
-    forces.totalLeftArm = forces.totalRightArm =
-        forces.frictionLeftArm = forces.frictionRightArm =
+    forces.engineLeftArm = forces.engineRightArm =
+        forces.friction[0] = forces.friction[1] = forces.friction[2] =
             forces.spring[0] = forces.spring[1] = forces.spring[2] = {};
 
     /* Get engine force direction from transformations */
@@ -397,13 +386,11 @@ void Forces2D::physicsStep(const Float, const Float) {
     /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
     forces.engineRightArm = -engineDirectionRight*state.currentPowerRightArm;
-    forces.totalLeftArm += forces.engineLeftArm;
-    forces.totalRightArm += forces.engineRightArm;
 
     /* Apply forces */
     applyForce(vehicle->absoluteTransformation().translation(), forces.weight);
-    applyForce(engineLeft->absoluteTransformation().translation(), forces.totalLeftArm);
-    applyForce(engineRight->absoluteTransformation().translation(), forces.totalRightArm);
+    applyForce(engineLeft->absoluteTransformation().translation(), forces.engineLeftArm);
+    applyForce(engineRight->absoluteTransformation().translation(), forces.engineRightArm);
 
     /* Apply spring forces for all penetrations */
     collisionShapes.setClean();
