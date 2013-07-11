@@ -290,11 +290,11 @@ void Forces2D::drawEvent() {
 
 void Forces2D::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::Left) {
-        state.currentPowerLeftArm = -parameters.powerArm;
-        state.currentPowerRightArm = -parameters.powerArm;
+        state.currentPowerLeftArm = {};
+        state.currentPowerRightArm = parameters.powerArm;
     } else if(event.key() == KeyEvent::Key::Right) {
         state.currentPowerLeftArm = parameters.powerArm;
-        state.currentPowerRightArm = parameters.powerArm;
+        state.currentPowerRightArm = {};
     } else if(event.key() == KeyEvent::Key::R) {
         vehicle->resetTransformation()->translate(Vector2::yAxis(0.3f));
         state.currentPowerLeftArm = state.currentPowerRightArm =
@@ -396,7 +396,7 @@ void Forces2D::physicsStep(const Float, const Float) {
 
     /* Add engine forces */
     forces.engineLeftArm = engineDirectionLeft*state.currentPowerLeftArm;
-    forces.engineRightArm = engineDirectionRight*state.currentPowerRightArm;
+    forces.engineRightArm = -engineDirectionRight*state.currentPowerRightArm;
     forces.totalLeftArm += forces.engineLeftArm;
     forces.totalRightArm += forces.engineRightArm;
 
