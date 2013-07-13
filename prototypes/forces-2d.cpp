@@ -82,8 +82,8 @@ class Forces2D: public Platform::Application {
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 
         struct {
-            Shapes::Shape<Shapes::Sphere2D>* tubeMin;
-            Shapes::Shape<Shapes::Composition2D> *tubeMax, *vehicle;
+            Shapes::Shape<Shapes::Sphere2D> *tube;
+            Shapes::Shape<Shapes::Composition2D>* vehicle;
         } shapes;
 
         struct {
@@ -210,10 +210,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineRight->transformation().translation().dot()*massArm);
 
     /* Tube collision shapes */
-    shapes.tubeMin = new Shapes::Shape<Shapes::Sphere2D>(tube, {{}, 0.99f}, &collisionShapes);
-    new DebugTools::ShapeRenderer2D(shapes.tubeMin, "collision", &drawables);
-    shapes.tubeMax = new Shapes::Shape<Shapes::Composition2D>(tube, !Shapes::Sphere2D({}, 1.01f), &collisionShapes);
-    new DebugTools::ShapeRenderer2D(shapes.tubeMax, "collision", &drawables);
+    shapes.tube = new Shapes::Shape<Shapes::Sphere2D>(tube, {{}, 1.0f}, &collisionShapes);
+    new DebugTools::ShapeRenderer2D(shapes.tube, "collision", &drawables);
 
     /* Vehicle collision shapes */
     shapes.vehicle = new Shapes::Shape<Shapes::Composition2D>(vehicle,
@@ -316,7 +314,7 @@ void Forces2D::globalPhysicsStep(const Float delta) {
         const Shapes::Point2D* penetrations[3];
         for(std::size_t i = 0; i != 3; ++i) {
             const auto* p = &shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
-            if(!(*p % shapes.tubeMin->transformedShape()))
+            if(!(*p % shapes.tube->transformedShape()))
                 penetrations[penetrationCount++] = p;
         }
 
@@ -409,11 +407,11 @@ void Forces2D::physicsStep(const Float, const Float) {
     collisionShapes.setClean();
     for(std::size_t i = 0; i != 3; ++i) {
         const auto& p = shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
-        if(p % shapes.tubeMin->transformedShape()) continue;
+        if(p % shapes.tube->transformedShape()) continue;
 
         /* Spring force is proportional to penetration depth */
         forces.spring[i] = p.position()*(parameters.springConstant*
-            (shapes.tubeMin->shape().radius()*p.position().lengthInverted() - 1.0f));
+            (shapes.tube->shape().radius()*p.position().lengthInverted() - 1.0f));
         applyForce(p.position(), forces.spring[i]);
     }
 }
