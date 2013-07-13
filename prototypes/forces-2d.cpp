@@ -164,11 +164,11 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Float massBody = 260.0f;
     const Float massArm = 80.0f;
     parameters.massInverted = 1.0f/(massBody + 2*massArm);
-    parameters.powerArm = 2500.0f;
+    parameters.powerArm = 1500.0f;
     parameters.restitution = 0.6f;
     parameters.staticFriction = 0.16f;
     parameters.dynamicFriction = 0.1f;
-    parameters.springConstant = 1000000; /** @todo Is this in sane range? */
+    parameters.springConstant = 500000; /** @todo Is this in sane range? */
 
     /* Object initialization */
     tube = new Object2D(&scene);
