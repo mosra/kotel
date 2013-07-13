@@ -157,7 +157,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Parameters */
     parameters.physicsTimeDelta = 1.0f/120.0f;
-    parameters.gravity = Vector2::yAxis(-9.81);
+    parameters.gravity = Vector2::yAxis(-9.81f);
     parameters.armAngle = Deg(110.0f);
     parameters.engineAngle = Deg(0.0f);
     parameters.armRadius = 1.0f;
