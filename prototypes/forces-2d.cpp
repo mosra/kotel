@@ -96,7 +96,7 @@ class Forces2D: public Platform::Application {
             Float massInverted,
                 powerArm,
                 restitution,
-                friction,
+                staticFriction, dynamicFriction,
                 springConstant,
                 momentOfInertiaInverted;
 
@@ -146,8 +146,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Debug draw setup */
     debugResourceManager.set("primaryForces", (new DebugTools::ForceRendererOptions)
         ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("friction", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(115.0f), 0.75f, 0.9f, 0.5f)));
     debugResourceManager.set("spring", (new DebugTools::ForceRendererOptions)
         ->setSize(0.000025f)->setColor(Color4(1.0f, 1.0f)));
     debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
@@ -168,7 +166,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     parameters.massInverted = 1.0f/(massBody + 2*massArm);
     parameters.powerArm = 2500.0f;
     parameters.restitution = 0.6f;
-    parameters.friction = 0.16f;
+    parameters.staticFriction = 0.16f;
+    parameters.dynamicFriction = 0.1f;
     parameters.springConstant = 1000000; /** @todo Is this in sane range? */
 
     /* Object initialization */
@@ -246,8 +245,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Engine, friction and spring forces visualization */
     new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "primaryForces", &drawables);
     new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "primaryForces", &drawables);
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.frictionLeftArm, "friction", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.frictionRightArm, "friction", &drawables);
     for(std::size_t i = 0; i != 3; ++i)
         new DebugTools::ForceRenderer2D(vehicle, shapes.vehicle->shape().get<Shapes::Point2D>(i).position(),
             &forces.spring[i], "spring", &drawables);
@@ -338,16 +335,32 @@ void Forces2D::globalPhysicsStep(const Float delta) {
                 const Vector2 position = absolutePosition - vehicle->absoluteTransformation().translation();
                 const Vector2 velocity = state.linearVelocity + state.angularSpeed*position.perpendicular();
 
-                /* Impulse in direction of the normal, don't allow it to go in
-                   wrong direction (i.e. when the spring forces are already
-                   doing the collision response */
-                const Vector2 impulse = Math::max(0.0f,
+                /* Collision impulse in direction of the normal, don't allow it
+                   to go in wrong direction (i.e. when the spring forces are
+                   already doing the collision response)e */
+                const Float collisionImpulseMagnitude = Math::max(0.0f,
                     -(parameters.restitution + 1.0f)*Vector2::dot(velocity, normal)/(
                         parameters.massInverted*normal.dot() +
                         parameters.momentOfInertiaInverted*Math::pow<2>(Vector2::cross(position, normal))
-                    ))*normal;
+                    ));
+                const Vector2 collisionImpulse = collisionImpulseMagnitude*normal;
 
-                applyImpulse(absolutePosition, impulse);
+                /* Neither normal nor tangent are normalized, the impulses are
+                   computed in a way to avoid any need for that */
+                const Vector2 tangent = normal.perpendicular()*Math::sign(Vector2::dot(velocity, normal.perpendicular()));
+
+                /* Friction impulse in direction of tangent */
+                const Float frictionImpulseMagnitude = -Vector2::dot(velocity, tangent)/(
+                    parameters.massInverted*tangent.dot() +
+                    parameters.momentOfInertiaInverted*Math::pow<2>(Vector2::cross(position, tangent))
+                );
+                const Vector2 frictionImpulse = Math::abs(frictionImpulseMagnitude) < collisionImpulse.length()*parameters.staticFriction ?
+                    frictionImpulseMagnitude*tangent : -collisionImpulse.length()*tangent*parameters.dynamicFriction;
+
+                /* Apply impulses */
+                applyImpulse(absolutePosition, frictionImpulse);
+                applyImpulse(absolutePosition, collisionImpulse);
+
             }; break;
 
             /* Three collisions shouldn't happen */
