@@ -55,10 +55,25 @@ target_link_libraries(forces-2d
     ${MAGNUM_SHAPES_LIBRARIES}
     ${MAGNUM_APPLICATION_LIBRARIES})
 
+set(PrototypeForces3d_SRCS
+    forces-3d.cpp)
+
+add_executable(forces-3d ${PrototypeForces3d_SRCS})
+target_link_libraries(forces-3d
+    ${MAGNUM_LIBRARIES}
+    ${MAGNUM_DEBUGTOOLS_LIBRARIES}
+    ${MAGNUM_MESHTOOLS_LIBRARIES}
+    ${MAGNUM_PRIMITIVES_LIBRARIES}
+    ${MAGNUM_SCENEGRAPH_LIBRARIES}
+    ${MAGNUM_SHADERS_LIBRARIES}
+    ${MAGNUM_SHAPES_LIBRARIES}
+    ${MAGNUM_APPLICATION_LIBRARIES})
+
 if(CORRADE_TARGET_NACL)
-    install(TARGETS forces-2d DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(TARGETS forces-2d forces-3d DESTINATION ${CMAKE_INSTALL_PREFIX})
     install(FILES
         NaClApplication.css NaClApplication.js
         forces-2d.html forces-2d.nmf
+        forces-3d.html forces-3d.nmf
         DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
