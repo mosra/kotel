@@ -68,9 +68,9 @@ class Forces3D: public Platform::Application {
         SceneGraph::DrawableGroup3D drawables;
 };
 
-Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, (new Configuration)
+Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, Configuration()
         #ifndef CORRADE_TARGET_NACL
-        ->setTitle("Kotel::Prototype::Forces3D")
+        .setTitle("Kotel::Prototype::Forces3D")
         #endif
     )
 {
