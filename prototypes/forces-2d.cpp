@@ -74,7 +74,6 @@ class Forces2D: public Platform::Application {
 
         Timeline timeline;
         Scene2D scene;
-        Object2D cameraObject;
         SceneGraph::Camera2D *camera;
         SceneGraph::DrawableGroup2D drawables;
         Shapes::ShapeGroup2D visualizationShapes, collisionShapes;
@@ -138,8 +137,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
     /* Camera setup */
-    cameraObject.setParent(&scene);
-    (camera = new SceneGraph::Camera2D(cameraObject))
+    (camera = new SceneGraph::Camera2D(scene))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjection(Vector2(3.0f));
 
