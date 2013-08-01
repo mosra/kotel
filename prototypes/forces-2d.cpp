@@ -139,21 +139,26 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Camera setup */
     cameraObject.setParent(&scene);
-    (camera = new SceneGraph::Camera2D(&cameraObject))
+    (camera = new SceneGraph::Camera2D(cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        ->setProjection(Vector2(3.0f));
+        .setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
-    debugResourceManager.set("primaryForces", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.00025f)->setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)));
-    debugResourceManager.set("spring", (new DebugTools::ForceRendererOptions)
-        ->setSize(0.000025f)->setColor(Color4(1.0f, 1.0f)));
-    debugResourceManager.set("collision", (new DebugTools::ShapeRendererOptions)
-        ->setPointSize(0.1f)->setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
-    debugResourceManager.set("vehicle", (new DebugTools::ShapeRendererOptions)
-        ->setColor(Color3(0.5f)));
-    debugResourceManager.set("parameters", (new DebugTools::ObjectRendererOptions)
-        ->setSize(0.1f));
+    auto primaryForcesOptions = new DebugTools::ForceRendererOptions;
+    primaryForcesOptions->setSize(0.00025f).setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f));
+    auto springOptions = new DebugTools::ForceRendererOptions;
+    springOptions->setSize(0.000025f).setColor(Color4(1.0f, 1.0f));
+    auto collisionOptions = new DebugTools::ShapeRendererOptions;
+    collisionOptions->setPointSize(0.1f).setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f));
+    auto vehicleOptions = new DebugTools::ShapeRendererOptions;
+    vehicleOptions->setColor(Color3(0.5f));
+    auto parametersOptions = new DebugTools::ObjectRendererOptions;
+    parametersOptions->setSize(0.1f);
+    debugResourceManager.set("primaryForces", primaryForcesOptions)
+        .set("spring", springOptions)
+        .set("collision", collisionOptions)
+        .set("vehicle", vehicleOptions)
+        .set("parameters", parametersOptions);
 
     /* Parameters */
     parameters.physicsTimeDelta = 1.0f/120.0f;
@@ -178,18 +183,18 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         ->translate({});
     (armLeft = new Object2D(vehicle))
         ->translate(Vector2::yAxis(-parameters.armRadius))
-        ->rotate(-parameters.armAngle/2);
+        .rotate(-parameters.armAngle/2);
     (armRight = new Object2D(vehicle))
         ->translate(Vector2::yAxis(-parameters.armRadius))
-        ->rotate(parameters.armAngle/2);
+        .rotate(parameters.armAngle/2);
     (engineLeft = new Object2D(vehicle))
         ->rotate(-parameters.engineAngle)
-        ->translate(Vector2::yAxis(-parameters.armRadius))
-        ->rotate(-parameters.armAngle/2);
+        .translate(Vector2::yAxis(-parameters.armRadius))
+        .rotate(-parameters.armAngle/2);
     (engineRight = new Object2D(vehicle))
         ->rotate(parameters.engineAngle)
-        ->translate(Vector2::yAxis(-parameters.armRadius))
-        ->rotate(parameters.armAngle/2);
+        .translate(Vector2::yAxis(-parameters.armRadius))
+        .rotate(parameters.armAngle/2);
 
     /* Compute center of mass and move it to center of the object */
     const Vector2 centerOfMass = (body->transformation().translation()*massBody +
@@ -210,42 +215,43 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineRight->transformation().translation().dot()*massArm);
 
     /* Tube collision shapes */
-    shapes.tube = new Shapes::Shape<Shapes::Sphere2D>(tube, {{}, 1.0f}, &collisionShapes);
-    new DebugTools::ShapeRenderer2D(shapes.tube, "collision", &drawables);
+    shapes.tube = new Shapes::Shape<Shapes::Sphere2D>(*tube, {{}, 1.0f}, &collisionShapes);
+    new DebugTools::ShapeRenderer2D(*shapes.tube, "collision", &drawables);
 
     /* Vehicle collision shapes */
-    shapes.vehicle = new Shapes::Shape<Shapes::Composition2D>(vehicle,
+    shapes.vehicle = new Shapes::Shape<Shapes::Composition2D>(*vehicle,
         Shapes::Point2D(body->transformation().translation()+Vector2::yAxis(0.15f)) ||
         Shapes::Point2D(engineLeft->transformation().translation()) ||
         Shapes::Point2D(engineRight->transformation().translation()), &collisionShapes);
-    new DebugTools::ShapeRenderer2D(shapes.vehicle, "collision", &drawables);
+    new DebugTools::ShapeRenderer2D(*shapes.vehicle, "collision", &drawables);
 
     /* Vehicle visualization */
-    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Sphere2D>(body,
-        {{}, 0.2f}, &visualizationShapes), "vehicle", &drawables);
+    auto bodyShape = new Shapes::Shape<Shapes::Sphere2D>(*body, {{}, 0.2f}, &visualizationShapes);
     const Shapes::LineSegment2D arm(Vector2::yAxis(parameters.armRadius-0.2f), Vector2::yAxis(0.03f));
-    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::LineSegment2D>(armLeft,
-        arm, &visualizationShapes), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::LineSegment2D>(armRight,
-        arm, &visualizationShapes), "vehicle", &drawables);
+    auto armLeftShape = new Shapes::Shape<Shapes::LineSegment2D>(*armLeft, arm, &visualizationShapes);
+    auto armRightShape = new Shapes::Shape<Shapes::LineSegment2D>(*armRight, arm, &visualizationShapes);
     const Shapes::Box2D engine(Matrix3::scaling({0.1f, 0.03f}));
-    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Box2D>(engineLeft,
-        engine, &visualizationShapes), "vehicle", &drawables);
-    new DebugTools::ShapeRenderer2D(new Shapes::Shape<Shapes::Box2D>(engineRight,
-        engine, &visualizationShapes), "vehicle", &drawables);
+    auto engineLeftShape = new Shapes::Shape<Shapes::Box2D>(*engineLeft, engine, &visualizationShapes);
+    auto engineRightShape = new Shapes::Shape<Shapes::Box2D>(*engineRight, engine, &visualizationShapes);
+    new DebugTools::ShapeRenderer2D(*bodyShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(*armLeftShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(*armRightShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(*engineLeftShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer2D(*engineRightShape, "vehicle", &drawables);
 
     /* Vehicle center-of-mass visualization */
-    new DebugTools::ObjectRenderer2D(vehicle, "parameters", &drawables);
+    new DebugTools::ObjectRenderer2D(*vehicle, "parameters", &drawables);
 
     /* Gravity force visualization */
-    new DebugTools::ForceRenderer2D(vehicle, {}, &forces.weight, "primaryForces", &drawables);
+    new DebugTools::ForceRenderer2D(*vehicle, {}, forces.weight, "primaryForces", &drawables);
 
     /* Engine, friction and spring forces visualization */
-    new DebugTools::ForceRenderer2D(engineLeft, {}, &forces.engineLeftArm, "primaryForces", &drawables);
-    new DebugTools::ForceRenderer2D(engineRight, {}, &forces.engineRightArm, "primaryForces", &drawables);
-    for(std::size_t i = 0; i != 3; ++i)
-        new DebugTools::ForceRenderer2D(vehicle, shapes.vehicle->shape().get<Shapes::Point2D>(i).position(),
-            &forces.spring[i], "spring", &drawables);
+    new DebugTools::ForceRenderer2D(*engineLeft, {}, forces.engineLeftArm, "primaryForces", &drawables);
+    new DebugTools::ForceRenderer2D(*engineRight, {}, forces.engineRightArm, "primaryForces", &drawables);
+    for(std::size_t i = 0; i != 3; ++i) {
+        const Vector2 position = shapes.vehicle->shape().get<Shapes::Point2D>(i).position();
+        new DebugTools::ForceRenderer2D(*vehicle, position, forces.spring[i], "spring", &drawables);
+    }
 
     /* Zero-time physics step */
     timeline.start();
@@ -280,7 +286,7 @@ void Forces2D::keyPressEvent(KeyEvent& event) {
         state.currentPowerLeftArm = parameters.powerArm;
         state.currentPowerRightArm = {};
     } else if(event.key() == KeyEvent::Key::R) {
-        vehicle->resetTransformation()->translate(Vector2::yAxis(0.3f));
+        vehicle->resetTransformation().translate(Vector2::yAxis(0.3f));
         state.currentPowerLeftArm = state.currentPowerRightArm =
             state.angularSpeed = {};
         state.linearVelocity = {};
@@ -367,8 +373,8 @@ void Forces2D::globalPhysicsStep(const Float delta) {
 
         /* New position and rotation (around COM) */
         vehicle->translate(state.linearVelocity*parameters.physicsTimeDelta)
-            ->rotate(Rad(state.angularSpeed*parameters.physicsTimeDelta), SceneGraph::TransformationType::Local)
-            ->normalizeRotation();
+            .rotate(Rad(state.angularSpeed*parameters.physicsTimeDelta), SceneGraph::TransformationType::Local)
+            .normalizeRotation();
 
         /* Compute force at new position */
         state.force = {};

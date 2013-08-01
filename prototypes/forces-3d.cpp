@@ -79,35 +79,35 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setClearColor(Color3(0.125f));
 
     (cameraObject = new Object3D(&scene))
-        ->translate(Vector3::zAxis(9.81f));
-    (camera = new SceneGraph::Camera3D(cameraObject))
+        ->translate({1.0f, 1.2f, 10.0f});
+    (camera = new SceneGraph::Camera3D(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        ->setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
+        .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
 
     class Tube: public Object3D, SceneGraph::Drawable3D {
         public:
-            Tube(Object3D* parent, SceneGraph::DrawableGroup3D* drawables): Object3D(parent), SceneGraph::Drawable3D(this, drawables), shader(Shaders::MeshVisualizer::Flag::Wireframe|Shaders::MeshVisualizer::Flag::NoGeometryShader) {
+            Tube(Object3D* parent, SceneGraph::DrawableGroup3D* drawables): Object3D(parent), SceneGraph::Drawable3D(*this, drawables), shader(Shaders::MeshVisualizer::Flag::Wireframe|Shaders::MeshVisualizer::Flag::NoGeometryShader) {
                 Trade::MeshData3D cube = Primitives::Cylinder::solid(10, 16, 10.0f);
                 std::vector<Float> vertexIndices(cube.indices().size(), 0.0f);
                 std::iota(vertexIndices.begin(), vertexIndices.end(), 0.0f);
                 MeshTools::flipFaceWinding(cube.indices());
                 MeshTools::transformVectorsInPlace(Quaternion::rotation(Deg(90.0f), Vector3::xAxis()), cube.positions(0));
-                MeshTools::interleave(&mesh, &vertexBuffer, Buffer::Usage::StaticDraw,
+                MeshTools::interleave(mesh, vertexBuffer, Buffer::Usage::StaticDraw,
                     MeshTools::duplicate(cube.indices(), cube.positions(0)),
                     vertexIndices);
 
                 mesh.setPrimitive(cube.primitive())
-                    ->addInterleavedVertexBuffer(&vertexBuffer, 0,
+                    .addInterleavedVertexBuffer(vertexBuffer, 0,
                         Shaders::MeshVisualizer::Position(), Shaders::MeshVisualizer::VertexIndex());
             }
 
         private:
-            void draw(const Matrix4& transformationMatrix, SceneGraph::AbstractCamera3D* camera) override {
-                shader.setTransformationProjectionMatrix(camera->projectionMatrix()*transformationMatrix)
-                    ->setViewportSize(Vector2(camera->viewport()))
-                    ->setColor(Color3(0.15f))
-                    ->setWireframeColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f))
-                    ->use();
+            void draw(const Matrix4& transformationMatrix, SceneGraph::AbstractCamera3D& camera) override {
+                shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
+                    .setViewportSize(Vector2(camera.viewport()))
+                    .setColor(Color3(0.15f))
+                    .setWireframeColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f))
+                    .use();
 
                 mesh.draw();
             }
