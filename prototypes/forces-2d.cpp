@@ -39,8 +39,8 @@
 #include <SceneGraph/DualComplexTransformation.h>
 #include <SceneGraph/Object.h>
 #include <SceneGraph/Scene.h>
+#include <Shapes/Capsule.h>
 #include <Shapes/Composition.h>
-#include <Shapes/Box.h>
 #include <Shapes/LineSegment.h>
 #include <Shapes/Point.h>
 #include <Shapes/Shape.h>
@@ -228,9 +228,9 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     const Shapes::LineSegment2D arm(Vector2::yAxis(parameters.armRadius-0.2f), Vector2::yAxis(0.03f));
     auto armLeftShape = new Shapes::Shape<Shapes::LineSegment2D>(*armLeft, arm, &visualizationShapes);
     auto armRightShape = new Shapes::Shape<Shapes::LineSegment2D>(*armRight, arm, &visualizationShapes);
-    const Shapes::Box2D engine(Matrix3::scaling({0.1f, 0.03f}));
-    auto engineLeftShape = new Shapes::Shape<Shapes::Box2D>(*engineLeft, engine, &visualizationShapes);
-    auto engineRightShape = new Shapes::Shape<Shapes::Box2D>(*engineRight, engine, &visualizationShapes);
+    const Shapes::Capsule2D engine(Vector2::xAxis(-0.07f), Vector2::xAxis(0.07f), 0.03f);
+    auto engineLeftShape = new Shapes::Shape<Shapes::Capsule2D>(*engineLeft, engine, &visualizationShapes);
+    auto engineRightShape = new Shapes::Shape<Shapes::Capsule2D>(*engineRight, engine, &visualizationShapes);
     new DebugTools::ShapeRenderer2D(*bodyShape, "vehicle", &drawables);
     new DebugTools::ShapeRenderer2D(*armLeftShape, "vehicle", &drawables);
     new DebugTools::ShapeRenderer2D(*armRightShape, "vehicle", &drawables);
