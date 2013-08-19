@@ -84,12 +84,14 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setFeature(Renderer::Feature::FaceCulling, true);
     Renderer::setClearColor(Color3(0.125f));
 
+    /* Camera setup */
     (cameraObject = new Object3D(&scene))
         ->translate(Vector3::zAxis(5.0f));
     (camera = new SceneGraph::Camera3D(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
 
+    /* Tube visualization */
     class Tube: public Object3D, SceneGraph::Drawable3D {
         public:
             Tube(Object3D* parent, SceneGraph::DrawableGroup3D* drawables): Object3D(parent), SceneGraph::Drawable3D(*this, drawables), shader(Shaders::MeshVisualizer::Flag::Wireframe|Shaders::MeshVisualizer::Flag::NoGeometryShader) {
