@@ -31,7 +31,6 @@
 #include <Platform/NaClApplication.h>
 #endif
 #include <Primitives/Cylinder.h>
-#include <Shaders/MeshVisualizer.h>
 #include <MeshTools/CompressIndices.h>
 #include <MeshTools/Duplicate.h>
 #include <MeshTools/FlipNormals.h>
@@ -41,6 +40,7 @@
 #include <SceneGraph/Drawable.h>
 #include <SceneGraph/DualQuaternionTransformation.h>
 #include <SceneGraph/Scene.h>
+#include <Shaders/MeshVisualizer.h>
 #include <Trade/MeshData3D.h>
 
 #ifdef MAGNUM_BUILD_STATIC
