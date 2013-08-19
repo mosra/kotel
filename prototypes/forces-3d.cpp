@@ -85,7 +85,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
     Renderer::setClearColor(Color3(0.125f));
 
     (cameraObject = new Object3D(&scene))
-        ->translate({1.0f, 1.2f, 10.0f});
+        ->translate(Vector3::zAxis(5.0f));
     (camera = new SceneGraph::Camera3D(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
