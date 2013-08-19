@@ -68,12 +68,18 @@ class Forces3D: public Platform::Application {
         SceneGraph::DrawableGroup3D drawables;
 };
 
-Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, Configuration()
-        #ifndef CORRADE_TARGET_NACL
-        .setTitle("Kotel::Prototype::Forces3D")
-        #endif
-    )
-{
+Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, nullptr) {
+    /* Try to create MSAA context */
+    Configuration conf;
+    #ifndef CORRADE_TARGET_NACL
+    conf.setTitle("Kotel::Prototype::Forces3D");
+    #endif
+    conf.setSampleCount(16);
+    if(!tryCreateContext(conf)) {
+        Warning() << "Cannot enable 16x MSAA, fallback to no-AA rendering";
+        createContext(conf.setSampleCount(0));
+    }
+
     Renderer::setFeature(Renderer::Feature::DepthTest, true);
     Renderer::setFeature(Renderer::Feature::FaceCulling, true);
     Renderer::setClearColor(Color3(0.125f));
