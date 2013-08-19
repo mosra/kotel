@@ -25,6 +25,8 @@
 #include <numeric>
 #include <DefaultFramebuffer.h>
 #include <Renderer.h>
+#include <DebugTools/ShapeRenderer.h>
+#include <DebugTools/ResourceManager.h>
 #ifndef CORRADE_TARGET_NACL
 #include <Platform/Sdl2Application.h>
 #else
@@ -41,6 +43,11 @@
 #include <SceneGraph/DualQuaternionTransformation.h>
 #include <SceneGraph/Scene.h>
 #include <Shaders/MeshVisualizer.h>
+#include <Shapes/Capsule.h>
+#include <Shapes/Composition.h>
+#include <Shapes/LineSegment.h>
+#include <Shapes/Shape.h>
+#include <Shapes/ShapeGroup.h>
 #include <Trade/MeshData3D.h>
 
 #ifdef MAGNUM_BUILD_STATIC
@@ -62,10 +69,20 @@ class Forces3D: public Platform::Application {
         void drawEvent() override;
 
     private:
+        DebugTools::ResourceManager debugResourceManager;
+
         Scene3D scene;
         Object3D* cameraObject;
         SceneGraph::Camera3D* camera;
         SceneGraph::DrawableGroup3D drawables;
+        Shapes::ShapeGroup3D visualizationShapes;
+
+        struct {
+            Deg armAngle, engineAngle;
+            Float armRadius;
+        } parameters;
+
+        Object3D *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 };
 
 Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, nullptr) {
@@ -90,6 +107,51 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
     (camera = new SceneGraph::Camera3D(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
+
+    /* Debug draw setup */
+    auto vehicleOptions = new DebugTools::ShapeRendererOptions;
+    vehicleOptions->setColor(Color3(0.5f));
+    debugResourceManager.set("vehicle", vehicleOptions);
+
+    /* Parameters */
+    parameters.armAngle = Deg(110.0f);
+    parameters.engineAngle = Deg(0.0f);
+    parameters.armRadius = 1.0f;
+
+    /* Object initialization */
+    (vehicle = new Object3D(&scene))
+        ->translate(Vector3::yAxis(0.3f));
+    (body = new Object3D(vehicle))
+        ->translate({});
+    (armLeft = new Object3D(vehicle))
+        ->translate(Vector3::yAxis(-parameters.armRadius))
+        .rotateZ(-parameters.armAngle/2);
+    (armRight = new Object3D(vehicle))
+        ->translate(Vector3::yAxis(-parameters.armRadius))
+        .rotateZ(parameters.armAngle/2);
+    (engineLeft = new Object3D(vehicle))
+        ->rotateZ(-parameters.engineAngle)
+        .translate(Vector3::yAxis(-parameters.armRadius))
+        .rotateZ(-parameters.armAngle/2);
+    (engineRight = new Object3D(vehicle))
+        ->rotateZ(parameters.engineAngle)
+        .translate(Vector3::yAxis(-parameters.armRadius))
+        .rotateZ(parameters.armAngle/2);
+
+    /* Vehicle visualization */
+    auto bodyShape = new Shapes::Shape<Shapes::Capsule3D>(*body, {Vector3::zAxis(0.5f), Vector3::zAxis(-0.5f), 0.2f}, &visualizationShapes);
+    const auto arm = Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, -0.4f}) ||
+                     Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, 0.55f});
+    auto armLeftShape = new Shapes::Shape<Shapes::Composition3D>(*armLeft, arm, &visualizationShapes);
+    auto armRightShape = new Shapes::Shape<Shapes::Composition3D>(*armRight, arm, &visualizationShapes);
+    const Shapes::Capsule3D engine(Vector3::zAxis(-0.55f), Vector3::zAxis(0.75f), 0.05f);
+    auto engineLeftShape = new Shapes::Shape<Shapes::Capsule3D>(*engineLeft, engine, &visualizationShapes);
+    auto engineRightShape = new Shapes::Shape<Shapes::Capsule3D>(*engineRight, engine, &visualizationShapes);
+    new DebugTools::ShapeRenderer3D(*bodyShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer3D(*armLeftShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer3D(*armRightShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer3D(*engineLeftShape, "vehicle", &drawables);
+    new DebugTools::ShapeRenderer3D(*engineRightShape, "vehicle", &drawables);
 
     /* Tube visualization */
     class Tube: public Object3D, SceneGraph::Drawable3D {
@@ -137,6 +199,7 @@ void Forces3D::viewportEvent(const Vector2i& size) {
 void Forces3D::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color|FramebufferClear::Depth);
 
+    visualizationShapes.setClean();
     camera->draw(drawables);
 
     swapBuffers();
