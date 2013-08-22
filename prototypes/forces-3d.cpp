@@ -117,7 +117,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Debug draw setup */
     debugResourceManager
-        .set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.5f)))
+        .set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.6f)))
         .set("collision", DebugTools::ShapeRendererOptions().setPointSize(0.1f).setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
 
     /* Parameters */
@@ -182,8 +182,8 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
             void draw(const Matrix4& transformationMatrix, SceneGraph::AbstractCamera3D& camera) override {
                 shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
                     .setViewportSize(Vector2(camera.viewport()))
-                    .setColor(Color3(0.10f))
-                    .setWireframeColor(Color3(0.30f))
+                    .setColor(Color3(0.15f))
+                    .setWireframeColor(Color3(0.25f))
                     .use();
 
                 mesh.draw();
