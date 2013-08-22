@@ -17,8 +17,12 @@ subdirectory and also online running in Google Chrome Native Client:
     interaction with gravity, engine forces and collision detection. Use
     **left/right arrow** to control the engines and **R key** to reset the
     vehicle.
+*   **Forces3D** -- http://mosra.github.io/kotel/forces-3d.html -- 3D physics
+    interaction with real track. Use **up/down arrow** to control main engine,
+    **left/right arrow** to control the side engines and **R key** to reset the
+    vehicle.
 
-You need Google Chrome 22 or higher with working Native Client and OpenGL.
+You need Google Chrome 25 or higher with working Native Client and OpenGL.
 Native Client is disabled by default and only apps from Chrome Web Store are
 allowed to run. This can be solved either by enabling Native Client in
 [chrome://flags](chrome://flags) or running chrome from terminal with
