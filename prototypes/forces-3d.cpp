@@ -138,11 +138,11 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
 
     /* Vehicle visualization */
     auto bodyShape = new Shapes::Shape<Shapes::Capsule3D>(*body, {Vector3::zAxis(0.5f), Vector3::zAxis(-0.5f), 0.2f}, &visualizationShapes);
-    const auto arm = Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, -0.4f}) ||
-                     Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, 0.55f});
+    const auto arm = Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, 0.45f}) ||
+                     Shapes::LineSegment3D(Vector3::yAxis(parameters.armRadius-0.2f), {0.0f, 0.05f, -0.65f});
     auto armLeftShape = new Shapes::Shape<Shapes::Composition3D>(*armLeft, arm, &visualizationShapes);
     auto armRightShape = new Shapes::Shape<Shapes::Composition3D>(*armRight, arm, &visualizationShapes);
-    const Shapes::Capsule3D engine(Vector3::zAxis(-0.55f), Vector3::zAxis(0.75f), 0.05f);
+    const Shapes::Capsule3D engine(Vector3::zAxis(0.55f), Vector3::zAxis(-0.75f), 0.05f);
     auto engineLeftShape = new Shapes::Shape<Shapes::Capsule3D>(*engineLeft, engine, &visualizationShapes);
     auto engineRightShape = new Shapes::Shape<Shapes::Capsule3D>(*engineRight, engine, &visualizationShapes);
     new DebugTools::ShapeRenderer3D(*bodyShape, "vehicle", &drawables);
