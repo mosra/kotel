@@ -109,9 +109,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
         .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
 
     /* Debug draw setup */
-    auto vehicleOptions = new DebugTools::ShapeRendererOptions;
-    vehicleOptions->setColor(Color3(0.5f));
-    debugResourceManager.set("vehicle", vehicleOptions);
+    debugResourceManager.set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.5f)));
 
     /* Parameters */
     parameters.armAngle = Deg(110.0f);

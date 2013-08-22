@@ -142,21 +142,12 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         .setProjection(Vector2(3.0f));
 
     /* Debug draw setup */
-    auto primaryForcesOptions = new DebugTools::ForceRendererOptions;
-    primaryForcesOptions->setSize(0.00025f).setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f));
-    auto springOptions = new DebugTools::ForceRendererOptions;
-    springOptions->setSize(0.000025f).setColor(Color4(1.0f, 1.0f));
-    auto collisionOptions = new DebugTools::ShapeRendererOptions;
-    collisionOptions->setPointSize(0.1f).setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f));
-    auto vehicleOptions = new DebugTools::ShapeRendererOptions;
-    vehicleOptions->setColor(Color3(0.5f));
-    auto parametersOptions = new DebugTools::ObjectRendererOptions;
-    parametersOptions->setSize(0.1f);
-    debugResourceManager.set("primaryForces", primaryForcesOptions)
-        .set("spring", springOptions)
-        .set("collision", collisionOptions)
-        .set("vehicle", vehicleOptions)
-        .set("parameters", parametersOptions);
+    debugResourceManager
+        .set("primaryForces", DebugTools::ForceRendererOptions().setSize(0.00025f).setColor(Color4::fromHSV(Deg(190.0f), 0.75f, 0.9f, 0.5f)))
+        .set("spring", DebugTools::ForceRendererOptions().setSize(0.000025f).setColor(Color4(1.0f, 1.0f)))
+        .set("collision", DebugTools::ShapeRendererOptions().setPointSize(0.1f).setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)))
+        .set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.5f)))
+        .set("parameters", DebugTools::ObjectRendererOptions().setSize(0.1f));
 
     /* Parameters */
     parameters.physicsTimeDelta = 1.0f/120.0f;
