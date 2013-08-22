@@ -45,7 +45,9 @@
 #include <Shaders/MeshVisualizer.h>
 #include <Shapes/Capsule.h>
 #include <Shapes/Composition.h>
+#include <Shapes/Cylinder.h>
 #include <Shapes/LineSegment.h>
+#include <Shapes/Point.h>
 #include <Shapes/Shape.h>
 #include <Shapes/ShapeGroup.h>
 #include <Trade/MeshData3D.h>
@@ -75,7 +77,7 @@ class Forces3D: public Platform::Application {
         Object3D* cameraObject;
         SceneGraph::Camera3D* camera;
         SceneGraph::DrawableGroup3D drawables;
-        Shapes::ShapeGroup3D visualizationShapes;
+        Shapes::ShapeGroup3D visualizationShapes, collisionShapes;
 
         struct {
             Deg armAngle, engineAngle;
@@ -83,6 +85,11 @@ class Forces3D: public Platform::Application {
         } parameters;
 
         Object3D *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
+
+        struct {
+            Shapes::Shape<Shapes::Cylinder3D> *tube;
+            Shapes::Shape<Shapes::Composition3D>* vehicle;
+        } shapes;
 };
 
 Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments, nullptr) {
@@ -109,7 +116,9 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
         .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
 
     /* Debug draw setup */
-    debugResourceManager.set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.5f)));
+    debugResourceManager
+        .set("vehicle", DebugTools::ShapeRendererOptions().setColor(Color3(0.5f)))
+        .set("collision", DebugTools::ShapeRendererOptions().setPointSize(0.1f).setColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f)));
 
     /* Parameters */
     parameters.armAngle = Deg(110.0f);
@@ -159,7 +168,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
                 std::vector<Float> vertexIndices(cube.indices().size(), 0.0f);
                 std::iota(vertexIndices.begin(), vertexIndices.end(), 0.0f);
                 MeshTools::flipFaceWinding(cube.indices());
-                MeshTools::transformVectorsInPlace(Quaternion::rotation(Deg(90.0f), Vector3::xAxis()), cube.positions(0));
+                MeshTools::transformVectorsInPlace(Matrix4::scaling(Vector3(1.05f))*Matrix4::rotation(Deg(90.0f), Vector3::xAxis()), cube.positions(0));
                 MeshTools::interleave(mesh, vertexBuffer, Buffer::Usage::StaticDraw,
                     MeshTools::duplicate(cube.indices(), cube.positions(0)),
                     vertexIndices);
@@ -173,8 +182,8 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
             void draw(const Matrix4& transformationMatrix, SceneGraph::AbstractCamera3D& camera) override {
                 shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
                     .setViewportSize(Vector2(camera.viewport()))
-                    .setColor(Color3(0.15f))
-                    .setWireframeColor(Color4::fromHSV(Deg(25.0f), 0.75f, 0.9f, 0.75f))
+                    .setColor(Color3(0.10f))
+                    .setWireframeColor(Color3(0.30f))
                     .use();
 
                 mesh.draw();
@@ -185,7 +194,19 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
             Shaders::MeshVisualizer shader;
     };
 
-    new Tube(&scene, &drawables);
+    auto tube = new Tube(&scene, &drawables);
+
+    /* Collision shapes */
+    shapes.vehicle = new Shapes::Shape<Shapes::Composition3D>(*vehicle,
+        Shapes::Point3D(body->transformation().translation()+Vector3(0.0f, 0.15f, 0.5f)) ||
+        Shapes::Point3D(body->transformation().translation()+Vector3(0.0f, 0.15f, -0.5f)) ||
+        Shapes::Point3D(engineLeft->transformation().translation()+Vector3::zAxis(0.55f)) ||
+        Shapes::Point3D(engineLeft->transformation().translation()+Vector3::zAxis(-0.75f)) ||
+        Shapes::Point3D(engineRight->transformation().translation()+Vector3::zAxis(0.55f)) ||
+        Shapes::Point3D(engineRight->transformation().translation()+Vector3::zAxis(-0.75f)), &collisionShapes);
+    shapes.tube = new Shapes::Shape<Shapes::Cylinder3D>(*tube, {Vector3::zAxis(0.75f), Vector3::zAxis(-0.95f), 1.0f}, &collisionShapes);
+    new DebugTools::ShapeRenderer3D(*shapes.vehicle, "collision", &drawables);
+    new DebugTools::ShapeRenderer3D(*shapes.tube, "collision", &drawables);
 }
 
 void Forces3D::viewportEvent(const Vector2i& size) {
@@ -198,6 +219,7 @@ void Forces3D::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color|FramebufferClear::Depth);
 
     visualizationShapes.setClean();
+    collisionShapes.setClean();
     camera->draw(drawables);
 
     swapBuffers();
