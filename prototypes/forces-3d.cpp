@@ -173,7 +173,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
                     vertexIndices);
 
                 mesh.setPrimitive(cube.primitive())
-                    .addInterleavedVertexBuffer(vertexBuffer, 0,
+                    .addVertexBuffer(vertexBuffer, 0,
                         Shaders::MeshVisualizer::Position(), Shaders::MeshVisualizer::VertexIndex());
             }
 
