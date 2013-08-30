@@ -106,7 +106,6 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
 
     Renderer::setFeature(Renderer::Feature::DepthTest, true);
     Renderer::setFeature(Renderer::Feature::FaceCulling, true);
-    Renderer::setClearColor(Color3(0.125f));
 
     /* Camera setup */
     (cameraObject = new Object3D(&scene))

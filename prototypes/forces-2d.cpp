@@ -132,7 +132,6 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         createContext(conf.setSampleCount(0));
     }
 
-    Renderer::setClearColor(Color3(0.125f));
     Renderer::setFeature(Renderer::Feature::Blending, true);
     Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
 
