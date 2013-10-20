@@ -81,7 +81,7 @@ class Forces2D: public Platform::Application {
         Object2D *tube, *vehicle, *body, *armLeft, *armRight, *engineLeft, *engineRight;
 
         struct {
-            Shapes::Shape<Shapes::Sphere2D> *tube;
+            Shapes::Shape<Shapes::InvertedSphere2D> *tube;
             Shapes::Shape<Shapes::Composition2D>* vehicle;
         } shapes;
 
@@ -203,7 +203,7 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
         engineRight->transformation().translation().dot()*massArm);
 
     /* Tube collision shapes */
-    shapes.tube = new Shapes::Shape<Shapes::Sphere2D>(*tube, {{}, 1.0f}, &collisionShapes);
+    shapes.tube = new Shapes::Shape<Shapes::InvertedSphere2D>(*tube, {{}, 1.0f}, &collisionShapes);
     new DebugTools::ShapeRenderer2D(*shapes.tube, "collision", &drawables);
 
     /* Vehicle collision shapes */
@@ -308,7 +308,7 @@ void Forces2D::globalPhysicsStep(const Float delta) {
         const Shapes::Point2D* penetrations[3];
         for(std::size_t i = 0; i != 3; ++i) {
             const auto* p = &shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
-            if(!(*p % shapes.tube->transformedShape()))
+            if(*p % shapes.tube->transformedShape())
                 penetrations[penetrationCount++] = p;
         }
 
@@ -401,12 +401,11 @@ void Forces2D::physicsStep(const Float, const Float) {
     collisionShapes.setClean();
     for(std::size_t i = 0; i != 3; ++i) {
         const auto& p = shapes.vehicle->transformedShape().get<Shapes::Point2D>(i);
-        if(p % shapes.tube->transformedShape()) continue;
+        const Shapes::Collision2D c = shapes.tube->transformedShape()/p;
 
         /* Spring force is proportional to penetration depth */
-        forces.spring[i] = p.position()*(parameters.springConstant*
-            (shapes.tube->shape().radius()*p.position().lengthInverted() - 1.0f));
-        applyForce(p.position(), forces.spring[i]);
+        forces.spring[i] = c.separationNormal()*(c.separationDistance()*parameters.springConstant);
+        applyForce(c.position(), forces.spring[i]);
     }
 }
 
