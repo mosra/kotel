@@ -120,10 +120,16 @@ find_library(CORRADE_TESTSUITE_LIBRARY CorradeTestSuite)
 # RC executable
 find_program(CORRADE_RC_EXECUTABLE corrade-rc)
 
-# Paths
+# Include dir
 find_path(CORRADE_INCLUDE_DIR
     NAMES PluginManager Utility
     PATH_SUFFIXES Corrade)
+
+# CMake module dir
+find_path(_CORRADE_MODULE_DIR
+    NAMES UseCorrade.cmake CorradeLibSuffix.cmake
+    PATHS ${CMAKE_ROOT}/Modules
+    PATH_SUFFIXES share/cmake/Corrade)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Corrade DEFAULT_MSG
@@ -132,7 +138,8 @@ find_package_handle_standard_args(Corrade DEFAULT_MSG
     CORRADE_PLUGINMANAGER_LIBRARY
     CORRADE_TESTSUITE_LIBRARY
     CORRADE_INCLUDE_DIR
-    CORRADE_RC_EXECUTABLE)
+    CORRADE_RC_EXECUTABLE
+    _CORRADE_MODULE_DIR)
 
 if(NOT CORRADE_FOUND)
     return()
@@ -192,6 +199,13 @@ endif()
 mark_as_advanced(CORRADE_UTILITY_LIBRARY
     CORRADE_INTERCONNECT_LIBRARY
     CORRADE_PLUGINMANAGER_LIBRARY
-    CORRADE_TESTSUITE_LIBRARY)
+    CORRADE_TESTSUITE_LIBRARY
+    _CORRADE_MODULE_DIR)
 
+# Include our module dir, if we have any
+if(NOT "${_CORRADE_MODULE_DIR}" STREQUAL "${CMAKE_ROOT}/Modules")
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${_CORRADE_MODULE_DIR}")
+endif()
+
+# Finalize the finding process
 include(UseCorrade)
