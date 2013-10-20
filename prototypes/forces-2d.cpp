@@ -138,7 +138,8 @@ Forces2D::Forces2D(const Arguments& arguments): Platform::Application(arguments,
     /* Camera setup */
     (camera = new SceneGraph::Camera2D(scene))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setProjection(Vector2(3.0f));
+        .setProjection(Vector2(3.0f))
+        .setViewport(defaultFramebuffer.viewport().size());
 
     /* Debug draw setup */
     debugResourceManager

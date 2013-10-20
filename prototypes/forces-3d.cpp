@@ -112,7 +112,8 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
         ->translate(Vector3::zAxis(5.0f));
     (camera = new SceneGraph::Camera3D(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f);
+        .setPerspective(Deg(35.0f), 4.0f/3, 0.001f, 100.0f)
+        .setViewport(defaultFramebuffer.viewport().size());
 
     /* Debug draw setup */
     debugResourceManager
