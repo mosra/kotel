@@ -10,7 +10,8 @@
 #
 #   This file is part of Magnum.
 #
-#   Copyright © 2010, 2011, 2012, 2013 Vladimír Vondruš <mosra@centrum.cz>
+#   Copyright © 2010, 2011, 2012, 2013, 2014
+#             Vladimír Vondruš <mosra@centrum.cz>
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a
 #   copy of this software and associated documentation files (the "Software"),
@@ -31,10 +32,14 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-# Library
-find_library(OPENGLES2_LIBRARY NAMES
-    GLESv2
-    ppapi_gles2) # NaCl
+# In Emscripten OpenGL ES 2 is linked automatically, thus no need to find the
+# library.
+if(NOT CORRADE_TARGET_EMSCRIPTEN)
+    find_library(OPENGLES2_LIBRARY NAMES
+        GLESv2
+        ppapi_gles2) # NaCl
+    set(OPENGLES2_LIBRARY_NEEDED OPENGLES2_LIBRARY)
+endif()
 
 # Include dir
 find_path(OPENGLES2_INCLUDE_DIR
@@ -44,6 +49,6 @@ find_path(OPENGLES2_INCLUDE_DIR
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args("OpenGLES2" DEFAULT_MSG
-    OPENGLES2_LIBRARY
+    ${OPENGLES2_LIBRARY_NEEDED}
     OPENGLES2_INCLUDE_DIR
 )
