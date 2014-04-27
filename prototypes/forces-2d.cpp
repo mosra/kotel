@@ -22,30 +22,30 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Math/Functions.h>
-#include <DefaultFramebuffer.h>
-#include <Renderer.h>
-#include <Timeline.h>
-#include <DebugTools/ForceRenderer.h>
-#include <DebugTools/ObjectRenderer.h>
-#include <DebugTools/ResourceManager.h>
-#include <DebugTools/ShapeRenderer.h>
+#include <Magnum/DefaultFramebuffer.h>
+#include <Magnum/Renderer.h>
+#include <Magnum/Timeline.h>
+#include <Magnum/DebugTools/ForceRenderer.h>
+#include <Magnum/DebugTools/ObjectRenderer.h>
+#include <Magnum/DebugTools/ResourceManager.h>
+#include <Magnum/DebugTools/ShapeRenderer.h>
+#include <Magnum/Math/Functions.h>
 #ifndef CORRADE_TARGET_NACL
-#include <Platform/Sdl2Application.h>
+#include <Magnum/Platform/Sdl2Application.h>
 #else
-#include <Platform/NaClApplication.h>
+#include <Magnum/Platform/NaClApplication.h>
 #endif
-#include <SceneGraph/Camera2D.h>
-#include <SceneGraph/DualComplexTransformation.h>
-#include <SceneGraph/Object.h>
-#include <SceneGraph/Scene.h>
-#include <Shapes/Capsule.h>
-#include <Shapes/Composition.h>
-#include <Shapes/LineSegment.h>
-#include <Shapes/Point.h>
-#include <Shapes/Shape.h>
-#include <Shapes/ShapeGroup.h>
-#include <Shapes/Sphere.h>
+#include <Magnum/SceneGraph/Camera2D.h>
+#include <Magnum/SceneGraph/DualComplexTransformation.h>
+#include <Magnum/SceneGraph/Object.h>
+#include <Magnum/SceneGraph/Scene.h>
+#include <Magnum/Shapes/Capsule.h>
+#include <Magnum/Shapes/Composition.h>
+#include <Magnum/Shapes/LineSegment.h>
+#include <Magnum/Shapes/Point.h>
+#include <Magnum/Shapes/Shape.h>
+#include <Magnum/Shapes/ShapeGroup.h>
+#include <Magnum/Shapes/Sphere.h>
 
 #ifdef MAGNUM_BUILD_STATIC
 #include <Shaders/magnumShadersResourceImport.hpp>
@@ -59,12 +59,12 @@ class Forces2D: public Platform::Application {
     public:
         explicit Forces2D(const Arguments& arguments);
 
+    private:
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
         void keyPressEvent(KeyEvent& event) override;
         void keyReleaseEvent(KeyEvent& event) override;
 
-    private:
         void globalPhysicsStep(Float delta);
         void physicsStep(Float time, Float delta);
         void applyForce(const Vector2& position, const Vector2& force);

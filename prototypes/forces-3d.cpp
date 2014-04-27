@@ -23,34 +23,35 @@
 */
 
 #include <numeric>
-#include <DefaultFramebuffer.h>
-#include <Renderer.h>
-#include <DebugTools/ShapeRenderer.h>
-#include <DebugTools/ResourceManager.h>
+#include <Magnum/Buffer.h>
+#include <Magnum/DefaultFramebuffer.h>
+#include <Magnum/Renderer.h>
+#include <Magnum/DebugTools/ShapeRenderer.h>
+#include <Magnum/DebugTools/ResourceManager.h>
 #ifndef CORRADE_TARGET_NACL
-#include <Platform/Sdl2Application.h>
+#include <Magnum/Platform/Sdl2Application.h>
 #else
-#include <Platform/NaClApplication.h>
+#include <Magnum/Platform/NaClApplication.h>
 #endif
-#include <Primitives/Cylinder.h>
-#include <MeshTools/CompressIndices.h>
-#include <MeshTools/Duplicate.h>
-#include <MeshTools/FlipNormals.h>
-#include <MeshTools/Interleave.h>
-#include <MeshTools/Transform.h>
-#include <SceneGraph/Camera3D.h>
-#include <SceneGraph/Drawable.h>
-#include <SceneGraph/DualQuaternionTransformation.h>
-#include <SceneGraph/Scene.h>
-#include <Shaders/MeshVisualizer.h>
-#include <Shapes/Capsule.h>
-#include <Shapes/Composition.h>
-#include <Shapes/Cylinder.h>
-#include <Shapes/LineSegment.h>
-#include <Shapes/Point.h>
-#include <Shapes/Shape.h>
-#include <Shapes/ShapeGroup.h>
-#include <Trade/MeshData3D.h>
+#include <Magnum/Primitives/Cylinder.h>
+#include <Magnum/MeshTools/CompressIndices.h>
+#include <Magnum/MeshTools/Duplicate.h>
+#include <Magnum/MeshTools/FlipNormals.h>
+#include <Magnum/MeshTools/Interleave.h>
+#include <Magnum/MeshTools/Transform.h>
+#include <Magnum/SceneGraph/Camera3D.h>
+#include <Magnum/SceneGraph/Drawable.h>
+#include <Magnum/SceneGraph/DualQuaternionTransformation.h>
+#include <Magnum/SceneGraph/Scene.h>
+#include <Magnum/Shaders/MeshVisualizer.h>
+#include <Magnum/Shapes/Capsule.h>
+#include <Magnum/Shapes/Composition.h>
+#include <Magnum/Shapes/Cylinder.h>
+#include <Magnum/Shapes/LineSegment.h>
+#include <Magnum/Shapes/Point.h>
+#include <Magnum/Shapes/Shape.h>
+#include <Magnum/Shapes/ShapeGroup.h>
+#include <Magnum/Trade/MeshData3D.h>
 
 #ifdef MAGNUM_BUILD_STATIC
 #include <Shaders/magnumShadersResourceImport.hpp>
@@ -67,10 +68,10 @@ class Forces3D: public Platform::Application {
     public:
         explicit Forces3D(const Arguments& arguments);
 
+    private:
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
 
-    private:
         DebugTools::ResourceManager debugResourceManager;
 
         Scene3D scene;
@@ -169,9 +170,9 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
                 std::iota(vertexIndices.begin(), vertexIndices.end(), 0.0f);
                 MeshTools::flipFaceWinding(cube.indices());
                 MeshTools::transformVectorsInPlace(Matrix4::scaling(Vector3(1.05f))*Matrix4::rotation(Deg(90.0f), Vector3::xAxis()), cube.positions(0));
-                MeshTools::interleave(mesh, vertexBuffer, Buffer::Usage::StaticDraw,
+                vertexBuffer.setData(MeshTools::interleave(
                     MeshTools::duplicate(cube.indices(), cube.positions(0)),
-                    vertexIndices);
+                    vertexIndices), BufferUsage::StaticDraw);
 
                 mesh.setPrimitive(cube.primitive())
                     .addVertexBuffer(vertexBuffer, 0,
@@ -183,10 +184,9 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
                 shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
                     .setViewportSize(Vector2(camera.viewport()))
                     .setColor(Color3(0.15f))
-                    .setWireframeColor(Color3(0.25f))
-                    .use();
+                    .setWireframeColor(Color3(0.25f));
 
-                mesh.draw();
+                mesh.draw(shader);
             }
 
             Buffer indexBuffer, vertexBuffer;

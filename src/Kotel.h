@@ -24,8 +24,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum.h>
-#include <SceneGraph/SceneGraph.h>
+#include <Magnum/Magnum.h>
+#include <Magnum/SceneGraph/SceneGraph.h>
 
 namespace Kotel {
 
