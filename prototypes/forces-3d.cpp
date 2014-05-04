@@ -54,7 +54,7 @@
 #include <Magnum/Trade/MeshData3D.h>
 
 #ifdef MAGNUM_BUILD_STATIC
-#include <Shaders/magnumShadersResourceImport.hpp>
+#include <Shaders/resourceImport.hpp>
 #endif
 
 #include "Kotel.h"
