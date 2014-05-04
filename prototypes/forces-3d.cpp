@@ -175,6 +175,7 @@ Forces3D::Forces3D(const Arguments& arguments): Platform::Application(arguments,
                     vertexIndices), BufferUsage::StaticDraw);
 
                 mesh.setPrimitive(cube.primitive())
+                    .setCount(cube.indices().size())
                     .addVertexBuffer(vertexBuffer, 0,
                         Shaders::MeshVisualizer::Position(), Shaders::MeshVisualizer::VertexIndex());
             }
