@@ -69,11 +69,20 @@ target_link_libraries(forces-3d
     ${MAGNUM_SHAPES_LIBRARIES}
     ${MAGNUM_APPLICATION_LIBRARIES})
 
-if(CORRADE_TARGET_NACL)
+if(CORRADE_TARGET_NACL OR CORRADE_TARGET_EMSCRIPTEN)
+    set(Web_FILES WebApplication.css)
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        set(Web_FILES ${Web_FILES}
+            EmscriptenApplication.js
+            forces-2d-emscripten.html
+            forces-3d-emscripten.html)
+    elseif(CORRADE_TARGET_NACL)
+        set(Web_FILES ${Web_FILES}
+            NaClApplication.js
+            forces-2d-nacl.html forces-2d.nmf
+            forces-3d-nacl.html forces-3d.nmf)
+    endif()
+
     install(TARGETS forces-2d forces-3d DESTINATION ${CMAKE_INSTALL_PREFIX})
-    install(FILES
-        NaClApplication.css NaClApplication.js
-        forces-2d.html forces-2d.nmf
-        forces-3d.html forces-3d.nmf
-        DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${Web_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
